@@ -1,303 +1,97 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<title>Частная резиденция в г. Сочи с видом на море</title>
-<meta charset="utf-8">
-<meta name="viewport" content="target-densitydpi=device-dpi, width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, minimal-ui" />
-<style> @-ms-viewport { width: device-width; } </style>
-<link rel="stylesheet" href="vendor/reset.min.css">
-<link rel="stylesheet" href="style.css">
+  <title></title>
+  <meta charset="utf-8">
+  <meta name="viewport"
+    content="target-densitydpi=device-dpi, width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, minimal-ui" />
+  <style>
+    @-ms-viewport {
+      width: device-width;
+    }
+  </style>
+  <link rel="stylesheet" href="vendor/reset.min.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="shortcut icon" type="image/x-icon" sizes="16x16 32x32 48x48 64x64" href="/img/pano.svg">
 </head>
+
 <body class="multiple-scenes ">
 
-<div id="pano"></div>
+  <div id="pano"></div>
 
-<div id="sceneList">
-  <ul class="scenes">
-    
-      <a href="javascript:void(0)" class="scene" data-id="0--">
-        <li class="text">Главный вид</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="1--1">
-        <li class="text">Дрон 1</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="2--2">
-        <li class="text">Дрон 2</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="3--3">
-        <li class="text">Дрон 3</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="4---1-">
-        <li class="text">Нижний участок 1 Старт</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="5---2">
-        <li class="text">Нижний участок 2</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="6---3">
-        <li class="text">Нижний участок 3</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="7---4">
-        <li class="text">Нижний участок 4</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="8---5">
-        <li class="text">Нижний участок 5</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="9--">
-        <li class="text">Въездные ворота</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="10---1">
-        <li class="text">Верхний участок 1</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="11---2">
-        <li class="text">Верхний участок 2</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="12---3">
-        <li class="text">Верхний участок 3</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="13-2----1">
-        <li class="text">2 этаж — Прихожая 1</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="14-2---">
-        <li class="text">2 этаж — Гардероб</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="15-2----2">
-        <li class="text">2 этаж — Прихожая 2</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="16-2---">
-        <li class="text">2 этаж — Коридор</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="17-2---">
-        <li class="text">2 этаж — Санузел</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="18-2----1">
-        <li class="text">2 этаж — Спальня 1</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="19-2----1">
-        <li class="text">2 этаж — Спальня 1</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="20-2----1-">
-        <li class="text">2 этаж — Спальня 1 Гардероб</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="21-2----1-">
-        <li class="text">2 этаж — Спальня 1 Ванная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="22-2----">
-        <li class="text">2 этаж —  Балкон</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="23-2----2">
-        <li class="text">2 этаж — Спальня 2</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="24-2----2">
-        <li class="text">2 этаж — Спальня 2</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="25-2----2-">
-        <li class="text">2 этаж — Спальня 2 Гардероб</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="26-2----2-">
-        <li class="text">2 этаж — Спальня 2 Гардероб</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="27-2----2-">
-        <li class="text">2 этаж — Спальня 2 Ванная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="28-2----2-">
-        <li class="text">2 этаж — Спальня 2 Ванная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="29--1">
-        <li class="text">Лестница 1</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="30--2">
-        <li class="text">Лестница 2</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="31-1---">
-        <li class="text">1 этаж — Коридор</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="32-1---">
-        <li class="text">1 этаж — Коридор</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="33-1----">
-        <li class="text">1 этаж — Кухня-гостиная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="34-1----">
-        <li class="text">1 этаж — Кухня-гостиная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="35-1----">
-        <li class="text">1 этаж — Кухня-гостиная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="36-1----">
-        <li class="text">1 этаж — Кухня-гостиная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="37-1----">
-        <li class="text">1 этаж — Кухня-гостиная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="38-1---">
-        <li class="text">1 этаж — Кабинет</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="39-1---">
-        <li class="text">1 этаж — Кабинет</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="40-1----">
-        <li class="text">1 этаж — Летняя кухня</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="41-1---">
-        <li class="text">1 этаж — Терраса</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="42-1---">
-        <li class="text">1 этаж — Терраса</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="43-1---">
-        <li class="text">1 этаж — Терраса</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="44----">
-        <li class="text">Хозблок — Зона отдыха</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="45----">
-        <li class="text">Хозблок — Зона отдыха</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="46---">
-        <li class="text">Хозблок — Коридор</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="47---">
-        <li class="text">Хозблок — Коридор</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="48---">
-        <li class="text">Хозблок — Санузел</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="49----">
-        <li class="text">Хозблок — Спорт-зал</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="50---">
-        <li class="text">Хозблок — Душевая</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="51---">
-        <li class="text">Хозблок — Сауна</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="52-3---">
-        <li class="text">3 этаж — Коридор</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="53-3----3">
-        <li class="text">3 этаж — Спальня 3</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="54-3----3-">
-        <li class="text">3 этаж — Спальня 3 Гардероб</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="55-3----3-">
-        <li class="text">3 этаж — Спальня 3 Ванная</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="56-3---">
-        <li class="text">3 этаж — Терраса</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="57-3---">
-        <li class="text">3 этаж — Терраса</li>
-      </a>
-    
-      <a href="javascript:void(0)" class="scene" data-id="58-3---">
-        <li class="text">3 этаж — Терраса</li>
-      </a>
-    
-  </ul>
-</div>
+  <div id="sceneList">
+    <ul class="scenes">
+    </ul>
+  </div>
 
-<div id="titleBar">
-  <h1 class="sceneName"></h1>
-</div>
+  <div id="titleBar">
+    <h1 class="sceneName"></h1>
+  </div>
 
-<a href="javascript:void(0)" id="autorotateToggle">
-  <img class="icon off" src="img/play.png">
-  <img class="icon on" src="img/pause.png">
-</a>
+  <a href="javascript:void(0)" id="autorotateToggle" style="display: none;">
+    <img class="icon off" src="img/play.png">
+    <img class="icon on" src="img/pause.png">
+  </a>
 
-<a href="javascript:void(0)" id="fullscreenToggle">
-  <img class="icon off" src="img/fullscreen.png">
-  <img class="icon on" src="img/windowed.png">
-</a>
+  <a href="javascript:void(0)" id="fullscreenToggle">
+    <img class="icon off" src="img/fullscreen.svg">
+    <img class="icon on" src="img/windowed.svg">
+  </a>
 
-<a href="javascript:void(0)" id="sceneListToggle">
-  <img class="icon off" src="img/expand.png">
-  <img class="icon on" src="img/collapse.png">
-</a>
+  <a href="javascript:void(0)" id="sceneListToggle">
+    <img class="icon off" src="img/menu.svg">
+    <img class="icon on" src="img/close.svg">
+  </a>
 
-<a href="javascript:void(0)" id="viewUp" class="viewControlButton viewControlButton-1">
-  <img class="icon" src="img/up.png">
-</a>
-<a href="javascript:void(0)" id="viewDown" class="viewControlButton viewControlButton-2">
-  <img class="icon" src="img/down.png">
-</a>
-<a href="javascript:void(0)" id="viewLeft" class="viewControlButton viewControlButton-3">
-  <img class="icon" src="img/left.png">
-</a>
-<a href="javascript:void(0)" id="viewRight" class="viewControlButton viewControlButton-4">
-  <img class="icon" src="img/right.png">
-</a>
-<a href="javascript:void(0)" id="viewIn" class="viewControlButton viewControlButton-5">
-  <img class="icon" src="img/plus.png">
-</a>
-<a href="javascript:void(0)" id="viewOut" class="viewControlButton viewControlButton-6">
-  <img class="icon" src="img/minus.png">
-</a>
+  <a href="javascript:void(0)" id="viewUp" class="viewControlButton viewControlButton-1">
+    <img class="icon" src="img/up.png">
+  </a>
+  <a href="javascript:void(0)" id="viewDown" class="viewControlButton viewControlButton-2">
+    <img class="icon" src="img/down.png">
+  </a>
+  <a href="javascript:void(0)" id="viewLeft" class="viewControlButton viewControlButton-3">
+    <img class="icon" src="img/left.png">
+  </a>
+  <a href="javascript:void(0)" id="viewRight" class="viewControlButton viewControlButton-4">
+    <img class="icon" src="img/right.png">
+  </a>
+  <a href="javascript:void(0)" id="viewIn" class="viewControlButton viewControlButton-5">
+    <img class="icon" src="img/plus.png">
+  </a>
+  <a href="javascript:void(0)" id="viewOut" class="viewControlButton viewControlButton-6">
+    <img class="icon" src="img/minus.png">
+  </a>
 
-<script src="vendor/screenfull.min.js" ></script>
-<script src="vendor/bowser.min.js" ></script>
-<script src="vendor/marzipano.js" ></script>
+  <script src="vendor/screenfull.min.js"></script>
+  <script src="vendor/bowser.min.js"></script>
+  <script src="vendor/marzipano.js"></script>
 
-<script src="data.js"></script>
-<script src="index.js"></script>
+  <script src="data.js"></script>
 
+  <script>
+    document.title = APP_DATA.name;
+
+    var el = document.querySelector('#sceneList ul');
+
+    APP_DATA.scenes.forEach(i => {
+      var a = document.createElement('a');
+      var li = document.createElement('li');
+
+      a.classList.add('scene');
+      a.setAttribute('data-id', i.id);
+      a.setAttribute('href', 'javascript:void(0)');
+
+      li.classList.add('text');
+      li.innerHTML = i.name;
+
+      a.appendChild(li);
+      el.appendChild(a);
+
+    });
+  </script>
+
+  <script src="index.js"></script>
 </body>
+
 </html>
