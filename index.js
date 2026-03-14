@@ -8,6 +8,45 @@
 
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
+  // ============================================================
+  // CSS для псевдо-полноэкранного режима (iOS Safari фоллбэк)
+  // ============================================================
+  var pseudoFullscreenCSS = document.createElement('style');
+  pseudoFullscreenCSS.textContent = [
+    'body.pseudo-fullscreen {',
+    '  position: fixed !important;',
+    '  top: 0 !important;',
+    '  left: 0 !important;',
+    '  width: 100vw !important;',
+    '  height: 100vh !important;',
+    '  margin: 0 !important;',
+    '  padding: 0 !important;',
+    '  overflow: hidden !important;',
+    '  z-index: 999999 !important;',
+    '}',
+    'body.pseudo-fullscreen #pano {',
+    '  position: fixed !important;',
+    '  top: 0 !important;',
+    '  left: 0 !important;',
+    '  width: 100vw !important;',
+    '  height: 100vh !important;',
+    '  z-index: 999999 !important;',
+    '}',
+    'body.pseudo-fullscreen #titleBar,',
+    'body.pseudo-fullscreen #sceneList,',
+    'body.pseudo-fullscreen #sceneListToggle,',
+    'body.pseudo-fullscreen #fullscreenToggle,',
+    'body.pseudo-fullscreen #autorotateToggle,',
+    'body.pseudo-fullscreen .viewControlButton {',
+    '  z-index: 1000000 !important;',
+    '}',
+    'body.pseudo-fullscreen #fullscreenToggle {',
+    '  position: fixed !important;',
+    '}'
+  ].join('\n');
+  document.head.appendChild(pseudoFullscreenCSS);
+  // ============================================================
+
   var panoElement = document.querySelector('#pano');
   var sceneNameElement = document.querySelector('#titleBar .sceneName');
   var sceneListElement = document.querySelector('#sceneList');
@@ -52,20 +91,15 @@
   var viewer = new Marzipano.Viewer(panoElement, viewerOpts);
 
   // ============================================================
-  // ПЛАВНОСТЬ: настройка инерции для мыши, тача и зума
+  // Плавность: настройка инерции
   // ============================================================
   var DRAG_FRICTION = 2;
   var ZOOM_FRICTION = 3;
 
-  // Откладываем патч, чтобы все контролы (включая touch) были
-  // зарегистрированы. Оборачиваем в try-catch, чтобы при любой
-  // ошибке тур продолжал работать нормально.
   setTimeout(function() {
     try {
       var ctls = viewer.controls();
       var methods = ctls._methods || [];
-
-      // Гарантируем, что methods итерируем
       if (typeof methods.forEach !== 'function') {
         if (typeof methods.length === 'number') {
           methods = Array.prototype.slice.call(methods);
@@ -73,31 +107,21 @@
           methods = [];
         }
       }
-
       methods.forEach(function(m) {
         try {
           var inst = m.instance || m;
           if (!inst || !inst._dynamics) return;
-
           var dyn = inst._dynamics;
-
-          // DragControlMethod / TouchControlMethod — dynamics.x и dynamics.y
           if (dyn.x && dyn.y) {
             dyn.x._friction = DRAG_FRICTION;
             dyn.y._friction = DRAG_FRICTION;
           }
-
-          // ScrollZoomControlMethod / PinchZoomControlMethod — один Dynamics
           if (typeof dyn._friction !== 'undefined') {
             dyn._friction = ZOOM_FRICTION;
           }
-        } catch (e) {
-          // Пропускаем метод, если структура отличается
-        }
+        } catch (e) {}
       });
-    } catch (e) {
-      // Плавность не применилась — тур работает со стандартным трением
-    }
+    } catch (e) {}
   }, 200);
   // ============================================================
 
@@ -161,8 +185,15 @@
 
   autorotateToggleElement.addEventListener('click', toggleAutorotate);
 
-  if (screenfull.enabled && data.settings.fullscreenButton) {
-    document.body.classList.add('fullscreen-enabled');
+  // ============================================================
+  // ПОЛНОЭКРАННЫЙ РЕЖИМ: принудительно включён, с iOS-фоллбэком
+  // ============================================================
+  // Убираем класс-блокировку и добавляем класс-разрешение
+  document.body.classList.remove('fullscreen-disabled');
+  document.body.classList.add('fullscreen-enabled');
+
+  if (screenfull && screenfull.enabled) {
+    // Браузер поддерживает Fullscreen API (Chrome, Firefox, Android, десктоп)
     fullscreenToggleElement.addEventListener('click', function() {
       screenfull.toggle();
     });
@@ -174,8 +205,21 @@
       }
     });
   } else {
-    document.body.classList.add('fullscreen-disabled');
+    // iOS Safari и другие без Fullscreen API — псевдо-полный экран через CSS
+    fullscreenToggleElement.addEventListener('click', function() {
+      document.body.classList.toggle('pseudo-fullscreen');
+      fullscreenToggleElement.classList.toggle('enabled');
+
+      // Прокручиваем вверх, чтобы скрыть адресную строку Safari
+      window.scrollTo(0, 1);
+
+      // Пересчитываем размер вьювера после смены режима
+      setTimeout(function() {
+        viewer.updateSize();
+      }, 100);
+    });
   }
+  // ============================================================
 
   sceneListToggleElement.addEventListener('click', toggleSceneList);
 
