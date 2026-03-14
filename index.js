@@ -6,10 +6,8 @@
   var screenfull = window.screenfull;
   var data = window.APP_DATA;
 
-  // FIX: определяем iOS для обхода бага Safari с cubeMap preview
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-  // Grab elements from DOM.
   var panoElement = document.querySelector('#pano');
   var sceneNameElement = document.querySelector('#titleBar .sceneName');
   var sceneListElement = document.querySelector('#sceneList');
@@ -18,7 +16,6 @@
   var autorotateToggleElement = document.querySelector('#autorotateToggle');
   var fullscreenToggleElement = document.querySelector('#fullscreenToggle');
 
-  // Detect desktop or mobile mode.
   if (window.matchMedia) {
     var setMode = function() {
       if (mql.matches) {
@@ -36,36 +33,63 @@
     document.body.classList.add('desktop');
   }
 
-  // Detect whether we are on a touch device.
   document.body.classList.add('no-touch');
   window.addEventListener('touchstart', function() {
     document.body.classList.remove('no-touch');
     document.body.classList.add('touch');
   });
 
-  // Use tooltip fallback mode on IE < 11.
   if (bowser.msie && parseFloat(bowser.version) < 11) {
     document.body.classList.add('tooltip-fallback');
   }
 
-  // Viewer options.
   var viewerOpts = {
     controls: {
       mouseViewMode: data.settings.mouseViewMode
     }
   };
 
-  // Initialize viewer.
   var viewer = new Marzipano.Viewer(panoElement, viewerOpts);
 
-  // Create scenes.
+  // ============================================================
+  // ПЛАВНОСТЬ: настройка инерции для мыши, тача и зума
+  // ============================================================
+  // friction — «трение». Чем ниже, тем дольше скольжение после свайпа.
+  //   По умолчанию в Marzipano: 6  (резкая остановка)
+  //   Рекомендации:
+  //     1   — очень длинное скольжение (может быть сложно контролировать)
+  //     2   — плавно, как в Google Street View
+  //     3   — баланс плавности и контроля
+  //     4-5 — лёгкое улучшение по сравнению с дефолтом
+  // ============================================================
+  var DRAG_FRICTION  = 2;   // для вращения мышью и свайпом
+  var ZOOM_FRICTION  = 3;   // для скролла и пинча
+
+  (function setupSmoothControls() {
+    var controls = viewer.controls();
+    if (!controls._methods) return;
+
+    controls._methods.forEach(function(m) {
+      var inst = m.instance;
+      if (!inst || !inst._dynamics) return;
+
+      // DragControlMethod (мышь + тач) — у них _dynamics.x и _dynamics.y
+      if (inst._dynamics.x && inst._dynamics.y) {
+        inst._dynamics.x._friction = DRAG_FRICTION;
+        inst._dynamics.y._friction = DRAG_FRICTION;
+      }
+
+      // ScrollZoomControlMethod / PinchZoomControlMethod — один объект Dynamics
+      if (typeof inst._dynamics._friction !== 'undefined') {
+        inst._dynamics._friction = ZOOM_FRICTION;
+      }
+    });
+  })();
+  // ============================================================
+
   var scenes = data.scenes.map(function(data) {
     var urlPrefix = "tiles";
 
-    // FIX: на iOS не используем cubeMapPreviewUrl, чтобы избежать
-    // некорректного отображения граней кубической карты в Safari.
-    // Fallback-слой (pinFirstLevel) по-прежнему обеспечит быстрый
-    // «черновой» показ через отдельные тайлы первого уровня.
     var sourceOptions = isIOS
       ? {}
       : { cubeMapPreviewUrl: urlPrefix + "/" + data.id + "/preview.jpg" };
@@ -76,11 +100,12 @@
 
     var geometry = new Marzipano.CubeGeometry(data.levels);
 
-var limiter = Marzipano.RectilinearView.limit.traditional(
-  data.faceSize * 4,           // зум-ин: в 4 раза глубже (допускаем лёгкую пикселизацию)
-  120 * Math.PI / 180,         // макс. вертикальный FOV: 120° (больше зум-аут)
-  150 * Math.PI / 180          // макс. горизонтальный FOV: 150° (больше зум-аут)
-);
+    var limiter = Marzipano.RectilinearView.limit.traditional(
+      data.faceSize * 4,
+      120 * Math.PI / 180,
+      150 * Math.PI / 180
+    );
+
     var view = new Marzipano.RectilinearView(data.initialViewParameters, limiter);
 
     var scene = viewer.createScene({
@@ -90,7 +115,6 @@ var limiter = Marzipano.RectilinearView.limit.traditional(
       pinFirstLevel: true
     });
 
-    // Create link hotspots.
     data.linkHotspots.forEach(function(hotspot) {
       var element = createLinkHotspotElement(hotspot);
       scene.hotspotContainer().createHotspot(element, {
@@ -98,7 +122,6 @@ var limiter = Marzipano.RectilinearView.limit.traditional(
       });
     });
 
-    // Create info hotspots.
     data.infoHotspots.forEach(function(hotspot) {
       var element = createInfoHotspotElement(hotspot);
       scene.hotspotContainer().createHotspot(element, {
@@ -113,7 +136,6 @@ var limiter = Marzipano.RectilinearView.limit.traditional(
     };
   });
 
-  // Set up autorotate, if enabled.
   var autorotate = Marzipano.autorotate({
     yawSpeed: 0.03,
     targetPitch: 0,
@@ -123,10 +145,8 @@ var limiter = Marzipano.RectilinearView.limit.traditional(
     autorotateToggleElement.classList.add('enabled');
   }
 
-  // Set handler for autorotate toggle.
   autorotateToggleElement.addEventListener('click', toggleAutorotate);
 
-  // Set up fullscreen mode, if supported.
   if (screenfull.enabled && data.settings.fullscreenButton) {
     document.body.classList.add('fullscreen-enabled');
     fullscreenToggleElement.addEventListener('click', function() {
@@ -143,28 +163,23 @@ var limiter = Marzipano.RectilinearView.limit.traditional(
     document.body.classList.add('fullscreen-disabled');
   }
 
-  // Set handler for scene list toggle.
   sceneListToggleElement.addEventListener('click', toggleSceneList);
 
-  // Start with the scene list open on desktop.
   if (!document.body.classList.contains('mobile')) {
     showSceneList();
   }
 
-  // Set handler for scene switch.
   scenes.forEach(function(scene) {
     var el = document.querySelector(
       '#sceneList .scene[data-id="' + scene.data.id + '"]');
     el.addEventListener('click', function() {
       switchScene(scene);
-      // On mobile, hide scene list after selecting a scene.
       if (document.body.classList.contains('mobile')) {
         hideSceneList();
       }
     });
   });
 
-  // DOM elements for view controls.
   var viewUpElement = document.querySelector('#viewUp');
   var viewDownElement = document.querySelector('#viewDown');
   var viewLeftElement = document.querySelector('#viewLeft');
@@ -172,11 +187,9 @@ var limiter = Marzipano.RectilinearView.limit.traditional(
   var viewInElement = document.querySelector('#viewIn');
   var viewOutElement = document.querySelector('#viewOut');
 
-  // Dynamic parameters for controls.
   var velocity = 0.7;
   var friction = 3;
 
-  // Associate view controls with elements.
   var controls = viewer.controls();
   controls.registerMethod('upElement',
     new Marzipano.ElementPressControlMethod(viewUpElement, 'y', -velocity, friction), true);
@@ -195,14 +208,6 @@ var limiter = Marzipano.RectilinearView.limit.traditional(
     return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;');
   }
 
-  // FIX: переработанная функция switchScene —
-  //   1) параметры вида устанавливаются ДО switchTo();
-  //   2) после switchTo() на следующем кадре (requestAnimationFrame)
-  //      параметры принудительно переприменяются — это гарантирует,
-  //      что iOS Safari не отрисует fallback-слой со «старой» матрицей;
-  //   3) autorotate стартует только после повторного применения параметров,
-  //      чтобы его targetPitch/targetFov не перебили начальный ракурс
-  //      на первом же кадре рендера.
   function switchScene(scene) {
     stopAutorotate();
     scene.view.setParameters(scene.data.initialViewParameters);
@@ -390,7 +395,6 @@ var limiter = Marzipano.RectilinearView.limit.traditional(
     return null;
   }
 
-  // Display the initial scene.
   switchScene(scenes[0]);
 
 })();
