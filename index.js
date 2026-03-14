@@ -1,549 +1,873 @@
-'use strict';
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -ms-text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  -ms-content-zooming: none;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
 
-(function() {
-  var Marzipano = window.Marzipano;
-  var bowser = window.bowser;
-  var screenfull = window.screenfull;
-  var data = window.APP_DATA;
+html, body {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  background-color: #000;
+  color: #fff;
+}
 
-  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+a, a:hover, a:active, a:visited {
+  text-decoration: none;
+  color: inherit;
+}
 
-  // ============================================================
-  // Инжектируемые стили: псевдо-фуллскрин + titleBar под кнопку
-  // ============================================================
-  var injectedCSS = document.createElement('style');
-  injectedCSS.textContent = [
+#pano {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
 
-    // --- Псевдо-полный экран (iOS и другие без Fullscreen API) ---
-    'body.pseudo-fullscreen {',
-    '  position: fixed !important;',
-    '  top: 0 !important;',
-    '  left: 0 !important;',
-    '  width: 100% !important;',
-    '  height: 100% !important;',
-    '  margin: 0 !important;',
-    '  padding: 0 !important;',
-    '  overflow: hidden !important;',
-    '  z-index: 999999 !important;',
-    '}',
+/* FIX: titleBar всегда на полную ширину, градиент под кнопками */
+#titleBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  text-align: center;
+  pointer-events: none; /* FIX: клики проходят сквозь к кнопкам поверх */
+}
 
-    'body.pseudo-fullscreen #pano {',
-    '  position: fixed !important;',
-    '  top: 0 !important;',
-    '  left: 0 !important;',
-    '  width: 100% !important;',
-    '  height: 100% !important;',
-    '  z-index: 999999 !important;',
-    '}',
+.mobile #titleBar {
+  height: 50px;
+}
 
-    'body.pseudo-fullscreen #titleBar,',
-    'body.pseudo-fullscreen #sceneList,',
-    'body.pseudo-fullscreen #sceneListToggle,',
-    'body.pseudo-fullscreen #fullscreenToggle,',
-    'body.pseudo-fullscreen #autorotateToggle,',
-    'body.pseudo-fullscreen .viewControlButton,',
-    'body.pseudo-fullscreen .hotspot {',
-    '  z-index: 1000000 !important;',
-    '}',
+/* FIX: убираем старые ограничения right — градиент всегда до края */
+body.fullscreen-enabled #titleBar {
+  right: 0;
+}
 
-    'body.pseudo-fullscreen #fullscreenToggle,',
-    'body.pseudo-fullscreen #sceneListToggle {',
-    '  position: fixed !important;',
-    '}',
+body.fullscreen-enabled.mobile #titleBar {
+  right: 0;
+}
 
-    'body.pseudo-fullscreen #titleBar {',
-    '  position: fixed !important;',
-    '  left: 0 !important;',
-    '  top: 0 !important;',
-    '}',
+body.multiple-scenes #titleBar {
+  left: 0;
+}
 
-    'body.pseudo-fullscreen #sceneList {',
-    '  position: fixed !important;',
-    '}',
+body.multiple-scenes.mobile #titleBar {
+  left: 0;
+}
 
-    // --- titleBar расширен под кнопку fullscreen ---
-    '#titleBar {',
-    '  right: 0 !important;',
-    '  padding-right: 120px !important;',
-    '}',
+#titleBar .sceneName {
+  width: 100%;
+  height: 100%;
+  line-height: 60px;
+  padding: 5px;
+  /* FIX: padding чтобы текст не залезал под кнопки */
+  padding-left: 65px;   /* под кнопку меню */
+  padding-right: 55px;  /* под кнопку fullscreen */
+  background: linear-gradient(0deg, rgba(0,0,0,0) 1%, rgba(0,0,0, 0.28) 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
-    // На мобильных — под обе кнопки (menu + fullscreen)
-    '@media (max-width: 500px), (max-height: 500px) {',
-    '  #titleBar {',
-    '    padding-right: 100px !important;',
-    '  }',
-    '}',
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 
-    // Кнопка fullscreen всегда видна
-    '.fullscreen-disabled #fullscreenToggle {',
-    '  display: block !important;',
-    '}'
+  display: flex;
+  align-content: center;
+  justify-content: center;
+  align-items: center;
+}
 
-  ].join('\n');
-  document.head.appendChild(injectedCSS);
-  // ============================================================
+.mobile #titleBar .sceneName {
+  line-height: 40px;
+  /* FIX: на мобильных кнопки крупнее */
+  padding-left: 55px;
+  padding-right: 55px;
+}
 
-  var panoElement = document.querySelector('#pano');
-  var sceneNameElement = document.querySelector('#titleBar .sceneName');
-  var sceneListElement = document.querySelector('#sceneList');
-  var sceneElements = document.querySelectorAll('#sceneList .scene');
-  var sceneListToggleElement = document.querySelector('#sceneListToggle');
-  var autorotateToggleElement = document.querySelector('#autorotateToggle');
-  var fullscreenToggleElement = document.querySelector('#fullscreenToggle');
+/* FIX: fullscreen кнопка всегда видна, позиция согласована с titleBar */
+#fullscreenToggle {
+  display: none;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 5px;
+  background-color: transparent;
+  z-index: 10;
+}
 
-  if (window.matchMedia) {
-    var setMode = function() {
-      if (mql.matches) {
-        document.body.classList.remove('desktop');
-        document.body.classList.add('mobile');
-      } else {
-        document.body.classList.remove('mobile');
-        document.body.classList.add('desktop');
-      }
-    };
-    var mql = matchMedia("(max-width: 500px), (max-height: 500px)");
-    setMode();
-    mql.addListener(setMode);
-  } else {
-    document.body.classList.add('desktop');
+.mobile #fullscreenToggle {
+  top: 3px;
+  right: 3px;
+  width: 44px;
+  height: 44px;
+}
+
+body.fullscreen-enabled #fullscreenToggle {
+  display: block;
+}
+
+/* FIX: принудительный показ даже при fullscreen-disabled */
+body.fullscreen-disabled #fullscreenToggle {
+  display: block;
+}
+
+#fullscreenToggle .icon {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 30px;
+  height: 30px;
+}
+
+.mobile #fullscreenToggle .icon {
+  top: 7px;
+  right: 7px;
+}
+
+#fullscreenToggle .icon.on {
+  display: none;
+}
+
+#fullscreenToggle .icon.off {
+  display: block;
+}
+
+#fullscreenToggle.enabled .icon.on {
+  display: block;
+}
+
+#fullscreenToggle.enabled .icon.off {
+  display: none;
+}
+
+#autorotateToggle {
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  padding: 5px;
+  background-color: rgb(103,115,131);
+  background-color: rgba(103,115,131,0.8);
+}
+
+.mobile #autorotateToggle {
+  width: 50px;
+  height: 50px;
+}
+
+body.fullscreen-enabled #autorotateToggle {
+  right: 40px;
+}
+
+body.fullscreen-enabled.mobile #autorotateToggle {
+  right: 50px;
+}
+
+#autorotateToggle .icon {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 30px;
+  height: 30px;
+}
+
+.mobile #autorotateToggle .icon {
+  top: 10px;
+  right: 10px;
+}
+
+#autorotateToggle .icon.on {
+  display: none;
+}
+
+#autorotateToggle .icon.off {
+  display: block;
+}
+
+#autorotateToggle.enabled .icon.on {
+  display: block;
+}
+
+#autorotateToggle.enabled .icon.off {
+  display: none;
+}
+
+/* FIX: кнопка меню согласована с высотой titleBar */
+#sceneListToggle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  padding: 5px;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+  z-index: 10;
+}
+
+.mobile #sceneListToggle {
+  width: 50px;
+  height: 50px;
+}
+
+#sceneListToggle .text {
+  position: absolute;
+  top: 5px;
+  left: 15px;
+  width: 100%;
+  line-height: 30px;
+}
+
+#sceneListToggle .icon {
+  width: 30px;
+  height: 30px;
+}
+
+.mobile #sceneListToggle .icon {
+  top: 10px;
+  right: 10px;
+}
+
+#sceneListToggle .icon.on {
+  display: none;
+}
+
+#sceneListToggle .icon.off {
+  display: block;
+}
+
+#sceneListToggle.enabled .icon.on {
+  display: block;
+}
+
+#sceneListToggle.enabled .icon.off {
+  display: none;
+}
+
+#sceneList {
+  position: absolute;
+  top: 3px;
+  left: -220px;
+  padding-top: 52px;
+  width: 220px;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  margin-left: 0;
+  -webkit-transition: margin-left 0.5s ease-in-out;
+  transition: margin-left 0.5s ease-in-out;
+  background-color: black;
+  border-radius: 6px;
+  scrollbar-color: #464646 black;
+  scrollbar-width: thin;
+}
+
+.mobile #sceneList {
+  padding-top: 50px;
+}
+
+#sceneList .scenes {
+  width: 100%;
+  background-color: black;
+  border-radius: 6px;
+}
+
+.mobile #sceneList {
+  width: 100%;
+  height: 100%;
+  left: -100%;
+}
+
+.mobile #sceneList.enabled {
+  margin-left: 100%;
+}
+
+.mobile #sceneList .scenes {
+  height: 100%;
+}
+
+#sceneList.enabled {
+  margin-left: 223px;
+}
+
+#sceneList .scene {
+  display: block;
+  width: 100%;
+  height: 60px;
+}
+
+.mobile #sceneList .scene {
+  height: 40px;
+}
+
+#sceneList .scene .text {
+  width: 100%;
+  height: 100%;
+  padding: 0 15px;
+  line-height: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile #sceneList .scene .text {
+  line-height: 60px;
+}
+
+.no-touch #sceneList .scene:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+#sceneList .scene.current {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.single-scene #sceneList, body.single-scene #sceneListToggle {
+  display: none;
+}
+
+/* Link hotspot */
+
+.link-hotspot {
+  width: 40px;
+  height: 40px;
+  margin-left: -30px;
+  margin-top: -30px;
+  opacity: 0.9;
+  -webkit-transition: opacity 0.2s;
+  transition: opacity 0.2s;
+}
+
+.no-touch .link-hotspot:hover {
+  opacity: 1;
+}
+
+.mobile .link-hotspot {
+  width: 45px;
+  height: 45px;
+}
+
+.link-hotspot-icon {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.link-hotspot-tooltip {
+  position: absolute;
+  left: 100%;
+  top: 2px;
+
+  margin-left: 3px;
+
+  font-size: 16px;
+
+  max-width: 300px;
+
+  padding: 8px 10px;
+
+  border-radius: 5px;
+
+  background-color: black;
+
+  color: #fff;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+
+  cursor: pointer;
+
+  opacity: 0;
+
+  -ms-transform: translateX(-8px);
+  -webkit-transform: translateX(-8px);
+  transform: translateX(-8px);
+
+  -webkit-transition: -ms-transform 0.3s,
+                      -webkit-transform 0.3s,
+                      transform 0.3s,
+                      opacity 0.3s;
+  transition: -ms-transform 0.3s,
+              -webkit-transform 0.3s,
+              transform 0.3s,
+              opacity 0.3s;
+}
+
+.mobile .link-hotspot {
+  top: 19px;
+}
+
+.no-touch .link-hotspot:hover .link-hotspot-tooltip {
+  opacity: 1;
+  -ms-transform: translateX(0);
+  -webkit-transform: translateX(0);
+  transform: translateX(0);
+}
+
+.link-hotspot-tooltip {
+  pointer-events: none;
+}
+.no-touch .link-hotspot:hover .link-hotspot-tooltip {
+  pointer-events: all;
+}
+
+.tooltip-fallback .link-hotspot-tooltip {
+  display: none;
+}
+.no-touch .tooltip-fallback .link-hotspot:hover .link-hotspot-tooltip {
+  display: block;
+}
+
+/* Info hotspot */
+
+.info-hotspot {
+  line-height: 1.2em;
+  opacity: 0.9;
+  -webkit-transition: opacity 0.2s 0.2s;
+  transition: opacity 0.2s 0.2s;
+}
+
+.no-touch .info-hotspot:hover {
+  opacity: 1;
+  -webkit-transition: opacity 0.2s;
+  transition: opacity 0.2s;
+}
+
+.info-hotspot.visible {
+  opacity: 1;
+}
+
+.info-hotspot .info-hotspot-header {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  background-color: rgba(0,0,0, 0.5);
+  cursor: pointer;
+  -webkit-transition: width 0.3s ease-in-out 0.5s,
+                      border-radius 0.3s ease-in-out 0.5s;
+  transition: width 0.3s ease-in-out 0.5s,
+              border-radius 0.3s ease-in-out 0.5s;
+}
+
+.mobile .info-hotspot .info-hotspot-header {
+  width: 50px;
+  height: 50px;
+  border-radius: 25px;
+}
+
+.desktop.no-touch .info-hotspot .info-hotspot-header:hover {
+  width: 260px;
+  border-radius: 5px;
+  -webkit-transition: width 0.3s ease-in-out,
+                      border-radius 0.3s ease-in-out;
+  transition: width 0.3s ease-in-out,
+              border-radius 0.3s ease-in-out;
+}
+
+.desktop .info-hotspot.visible .info-hotspot-header,
+.desktop.no-touch .info-hotspot.visible .info-hotspot-header:hover {
+  width: 260px;
+  border-radius: 5px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+  -webkit-transition: width 0.3s ease-in-out,
+                      border-radius 0.3s ease-in-out;
+  transition: width 0.3s ease-in-out,
+              border-radius 0.3s ease-in-out;
+  background-color: black;
+}
+
+.info-hotspot .info-hotspot-icon-wrapper {
+  width: 40px;
+  height: 40px;
+}
+
+.mobile .info-hotspot .info-hotspot-icon-wrapper {
+  width: 50px;
+  height: 50px;
+}
+
+.info-hotspot .info-hotspot-icon {
+  width: 90%;
+  height: 90%;
+  margin: 5%;
+}
+
+.info-hotspot .info-hotspot-title-wrapper {
+  position: absolute;
+  left: 40px;
+  top: 0;
+  width: 220px;
+  height: 40px;
+  padding: 0 5px;
+  overflow: hidden;
+  transition: opacity 0.1s linear;
+  opacity: 0;
+}
+
+.desktop .info-hotspot.visible .info-hotspot-title-wrapper,
+.desktop.no-touch .info-hotspot .info-hotspot-header:hover .info-hotspot-title-wrapper {
+  width: 220px;
+  padding: 0 5px;
+  transition: opacity 0.1s linear ;
+  opacity: 1;
+}
+
+.info-hotspot .info-hotspot-title-wrapper:before {
+  content: '';
+  display: inline-block;
+  vertical-align: middle;
+  height: 100%;
+}
+
+.info-hotspot .info-hotspot-title {
+  display: inline-block;
+  vertical-align: middle;
+
+  -moz-user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+.info-hotspot .info-hotspot-close-wrapper {
+  position: absolute;
+  left: 260px;
+  top: 0;
+  height: 40px;
+  width: 40px;
+  border-top-right-radius: 5px;
+  background-color: black;
+  visibility: hidden;
+  -ms-transform-origin: 0 50% 0;
+  -webkit-transform-origin: 0 50% 0;
+  transform-origin: 0 50% 0;
+  transition: 0.2s linear all;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.desktop .info-hotspot.visible .info-hotspot-close-wrapper {
+  visibility: visible;
+  transition: 0.2s linear all;
+  opacity: 1;
+}
+
+.info-hotspot .info-hotspot-close-icon {
+  width: 80%;
+  height: 80%;
+}
+
+.info-hotspot .info-hotspot-text {
+  position: absolute;
+  width: 300px;
+  height: auto;
+  max-height: 200px;
+  top: 40px;
+  left: 0;
+  padding: 10px;
+  background-color: white;
+  color: black;
+  border-bottom-right-radius: 5px;
+  border-bottom-left-radius: 5px;
+  overflow-y: auto;
+  visibility: hidden;
+  -ms-transform: perspective(200px) rotateX(-89.999deg);
+  -webkit-transform: perspective(200px) rotateX(-89.999deg);
+  transform: perspective(200px) rotateX(-89.999deg);
+  -ms-transform-origin: 50% 0 0;
+  -webkit-transform-origin: 50% 0 0;
+  transform-origin: 50% 0 0;
+  -webkit-transition: -ms-transform 0.3s,
+                      -webkit-transform 0.3s,
+                      transform 0.3s,
+                      visibility 0s 0.3s;
+  transition: -ms-transform 0.3s,
+              -webkit-transform 0.3s,
+              transform 0.3s,
+              visibility 0s 0.3s;
+
+  -moz-user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+.desktop .info-hotspot.visible .info-hotspot-text {
+  visibility: visible;
+  -ms-transform: perspective(200px) rotateX(0deg);
+  -webkit-transform: perspective(200px) rotateX(0deg);
+  transform: perspective(200px) rotateX(0deg);
+  -webkit-transition: -ms-transform 0.3s 0.3s,
+                      -webkit-transform 0.3s 0.3s,
+                      transform 0.3s 0.3s,
+                      visibility 0s 0s;
+  transition: -ms-transform 0.3s 0.3s,
+              -webkit-transform 0.3s 0.3s,
+              transform 0.3s 0.3s,
+              visibility 0s 0s;
+}
+
+/* Info hotspot modal */
+
+.desktop .info-hotspot-modal {
+  display: none;
+}
+
+.info-hotspot-modal {
+  top: 0;
+  left: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 11000 !important;
+  background-color: rgba(0,0,0,.5);
+  line-height: 1.2em;
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transition: opacity 0.2s ease-in-out 0.5s,
+                      visibility 0s 0.7s;
+  transition: opacity 0.2s ease-in-out 0.5s,
+              visibility 0s 0.7s;
+}
+
+.info-hotspot-modal.visible {
+  opacity: 1;
+  visibility: visible;
+  -webkit-transition: opacity 0.2s ease-in-out,
+                      visibility 0s 0s;
+  transition: opacity 0.2s ease-in-out,
+              visibility 0s 0s;
+}
+
+.info-hotspot-modal .info-hotspot-header {
+  position: absolute;
+  top: 60px;
+  left: 10px;
+  right: 10px;
+  width: auto;
+  height: 50px;
+  background-color: black;
+  opacity: 0;
+  -webkit-transition: opacity 0.3s ease-in-out 0.2s;
+  transition: opacity 0.3s ease-in-out 0.2s;
+}
+
+.info-hotspot-modal.visible .info-hotspot-header {
+  opacity: 1;
+  -webkit-transition: opacity 0.3s ease-in-out 0.2s;
+  transition: opacity 0.3s ease-in-out 0.2s;
+}
+
+.info-hotspot-modal .info-hotspot-icon-wrapper {
+  width: 50px;
+  height: 50px;
+}
+
+.info-hotspot-modal .info-hotspot-icon {
+  width: 90%;
+  height: 90%;
+  margin: 5%;
+}
+
+.info-hotspot-modal .info-hotspot-title-wrapper {
+  position: absolute;
+  top: 0;
+  left: 50px;
+  right: 50px;
+  width: auto;
+  height: 50px;
+  padding: 0 10px;
+}
+
+.info-hotspot-modal .info-hotspot-title-wrapper:before {
+  content: '';
+  display: inline-block;
+  vertical-align: middle;
+  height: 100%;
+}
+
+.info-hotspot-modal .info-hotspot-title {
+  display: inline-block;
+  vertical-align: middle;
+
+  -moz-user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+.info-hotspot-modal .info-hotspot-close-wrapper {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50px;
+  height: 50px;
+  background-color: black;
+  cursor: pointer;
+}
+
+.info-hotspot-modal .info-hotspot-close-icon {
+  width: 70%;
+  height: 70%;
+  margin: 15%;
+}
+
+.info-hotspot-modal .info-hotspot-text {
+  position: absolute;
+  top: 110px;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  padding: 10px;
+  background-color: white;
+  color: black;
+  overflow-y: auto;
+  opacity: 0;
+  -webkit-transition: opacity 0.3s ease-in-out;
+  transition: opacity 0.3s ease-in-out;
+
+  -moz-user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+.info-hotspot-modal.visible .info-hotspot-text {
+  opacity: 1;
+  -webkit-transition: opacity 0.3s ease-in-out 0.4s;
+  transition: opacity 0.3s ease-in-out 0.4s;
+}
+
+/* View control buttons */
+
+.viewControlButton {
+  display: none;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  padding: 5px;
+  background-color: rgb(103,115,131);
+  background-color: rgba(103,115,131,0.8);
+}
+
+body.view-control-buttons .viewControlButton {
+  display: block;
+}
+
+@media (max-width: 600px) {
+  body.view-control-buttons .viewControlButton {
+    display: none;
   }
-
-  document.body.classList.add('no-touch');
-  window.addEventListener('touchstart', function() {
-    document.body.classList.remove('no-touch');
-    document.body.classList.add('touch');
-  });
-
-  if (bowser.msie && parseFloat(bowser.version) < 11) {
-    document.body.classList.add('tooltip-fallback');
-  }
-
-  var viewerOpts = {
-    controls: {
-      mouseViewMode: data.settings.mouseViewMode
-    }
-  };
-
-  var viewer = new Marzipano.Viewer(panoElement, viewerOpts);
-
-  // ============================================================
-  // Плавность: настройка инерции
-  // ============================================================
-  var DRAG_FRICTION = 2;
-  var ZOOM_FRICTION = 3;
-
-  setTimeout(function() {
-    try {
-      var ctls = viewer.controls();
-      var methods = ctls._methods || [];
-      if (typeof methods.forEach !== 'function') {
-        if (typeof methods.length === 'number') {
-          methods = Array.prototype.slice.call(methods);
-        } else {
-          methods = [];
-        }
-      }
-      methods.forEach(function(m) {
-        try {
-          var inst = m.instance || m;
-          if (!inst || !inst._dynamics) return;
-          var dyn = inst._dynamics;
-          if (dyn.x && dyn.y) {
-            dyn.x._friction = DRAG_FRICTION;
-            dyn.y._friction = DRAG_FRICTION;
-          }
-          if (typeof dyn._friction !== 'undefined') {
-            dyn._friction = ZOOM_FRICTION;
-          }
-        } catch (e) {}
-      });
-    } catch (e) {}
-  }, 200);
-  // ============================================================
-
-  var scenes = data.scenes.map(function(data) {
-    var urlPrefix = "tiles";
-
-    var sourceOptions = isIOS
-      ? {}
-      : { cubeMapPreviewUrl: urlPrefix + "/" + data.id + "/preview.jpg" };
-
-    var source = Marzipano.ImageUrlSource.fromString(
-      urlPrefix + "/" + data.id + "/{z}/{f}/{y}/{x}.jpg",
-      sourceOptions);
-
-    var geometry = new Marzipano.CubeGeometry(data.levels);
-
-    var limiter = Marzipano.RectilinearView.limit.traditional(
-      data.faceSize * 4,
-      120 * Math.PI / 180,
-      150 * Math.PI / 180
-    );
-
-    var view = new Marzipano.RectilinearView(data.initialViewParameters, limiter);
-
-    var scene = viewer.createScene({
-      source: source,
-      geometry: geometry,
-      view: view,
-      pinFirstLevel: true
-    });
-
-    data.linkHotspots.forEach(function(hotspot) {
-      var element = createLinkHotspotElement(hotspot);
-      scene.hotspotContainer().createHotspot(element, {
-        yaw: hotspot.yaw, pitch: hotspot.pitch
-      });
-    });
-
-    data.infoHotspots.forEach(function(hotspot) {
-      var element = createInfoHotspotElement(hotspot);
-      scene.hotspotContainer().createHotspot(element, {
-        yaw: hotspot.yaw, pitch: hotspot.pitch
-      });
-    });
-
-    return {
-      data: data,
-      scene: scene,
-      view: view
-    };
-  });
-
-  var autorotate = Marzipano.autorotate({
-    yawSpeed: 0.03,
-    targetPitch: 0,
-    targetFov: Math.PI / 2
-  });
-  if (data.settings.autorotateEnabled) {
-    autorotateToggleElement.classList.add('enabled');
-  }
-
-  autorotateToggleElement.addEventListener('click', toggleAutorotate);
-
-  // ============================================================
-  // ПОЛНОЭКРАННЫЙ РЕЖИМ
-  // ============================================================
-  // Принудительно показываем кнопку
-  document.body.classList.remove('fullscreen-disabled');
-  document.body.classList.add('fullscreen-enabled');
-
-  // На iOS всегда используем псевдо-фуллскрин,
-  // потому что Safari на iPhone не поддерживает Fullscreen API
-  var useNativeFullscreen = !isIOS && screenfull && screenfull.enabled;
-
-  // Переменная для отслеживания состояния псевдо-фуллскрина
-  var isPseudoFullscreen = false;
-
-  fullscreenToggleElement.addEventListener('click', function() {
-    if (useNativeFullscreen) {
-      // Десктоп, Android — нативный полный экран
-      screenfull.toggle();
-    } else {
-      // iOS и прочие — псевдо-полный экран через CSS
-      togglePseudoFullscreen();
-    }
-  });
-
-  // Обработка нативного полного экрана
-  if (useNativeFullscreen) {
-    screenfull.on('change', function() {
-      if (screenfull.isFullscreen) {
-        fullscreenToggleElement.classList.add('enabled');
-      } else {
-        fullscreenToggleElement.classList.remove('enabled');
-      }
-    });
-  }
-
-  function togglePseudoFullscreen() {
-    isPseudoFullscreen = !isPseudoFullscreen;
-
-    if (isPseudoFullscreen) {
-      document.body.classList.add('pseudo-fullscreen');
-      fullscreenToggleElement.classList.add('enabled');
-
-      // Пытаемся скрыть адресную строку Safari
-      window.scrollTo(0, 0);
-      setTimeout(function() { window.scrollTo(0, 1); }, 50);
-
-      // Блокируем скролл страницы
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-    } else {
-      document.body.classList.remove('pseudo-fullscreen');
-      fullscreenToggleElement.classList.remove('enabled');
-
-      // Возвращаем скролл
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-    }
-
-    // Обновляем размер canvas после анимации
-    setTimeout(function() {
-      viewer.updateSize();
-    }, 100);
-    setTimeout(function() {
-      viewer.updateSize();
-    }, 300);
-  }
-
-  // Выход из псевдо-фуллскрина по кнопке «Назад» на Android
-  window.addEventListener('popstate', function() {
-    if (isPseudoFullscreen) {
-      togglePseudoFullscreen();
-    }
-  });
-
-  // Обработка смены ориентации экрана — пересчёт canvas
-  window.addEventListener('orientationchange', function() {
-    setTimeout(function() {
-      viewer.updateSize();
-    }, 200);
-    setTimeout(function() {
-      viewer.updateSize();
-    }, 500);
-  });
-
-  window.addEventListener('resize', function() {
-    setTimeout(function() {
-      viewer.updateSize();
-    }, 100);
-  });
-  // ============================================================
-
-  sceneListToggleElement.addEventListener('click', toggleSceneList);
-
-  if (!document.body.classList.contains('mobile')) {
-    showSceneList();
-  }
-
-  scenes.forEach(function(scene) {
-    var el = document.querySelector(
-      '#sceneList .scene[data-id="' + scene.data.id + '"]');
-    el.addEventListener('click', function() {
-      switchScene(scene);
-      if (document.body.classList.contains('mobile')) {
-        hideSceneList();
-      }
-    });
-  });
-
-  var viewUpElement = document.querySelector('#viewUp');
-  var viewDownElement = document.querySelector('#viewDown');
-  var viewLeftElement = document.querySelector('#viewLeft');
-  var viewRightElement = document.querySelector('#viewRight');
-  var viewInElement = document.querySelector('#viewIn');
-  var viewOutElement = document.querySelector('#viewOut');
-
-  var velocity = 0.7;
-  var friction = 3;
-
-  var controls = viewer.controls();
-  controls.registerMethod('upElement',
-    new Marzipano.ElementPressControlMethod(viewUpElement, 'y', -velocity, friction), true);
-  controls.registerMethod('downElement',
-    new Marzipano.ElementPressControlMethod(viewDownElement, 'y', velocity, friction), true);
-  controls.registerMethod('leftElement',
-    new Marzipano.ElementPressControlMethod(viewLeftElement, 'x', -velocity, friction), true);
-  controls.registerMethod('rightElement',
-    new Marzipano.ElementPressControlMethod(viewRightElement, 'x', velocity, friction), true);
-  controls.registerMethod('inElement',
-    new Marzipano.ElementPressControlMethod(viewInElement, 'zoom', -velocity, friction), true);
-  controls.registerMethod('outElement',
-    new Marzipano.ElementPressControlMethod(viewOutElement, 'zoom', velocity, friction), true);
-
-  function sanitize(s) {
-    return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;');
-  }
-
-  function switchScene(scene) {
-    stopAutorotate();
-    scene.view.setParameters(scene.data.initialViewParameters);
-    scene.scene.switchTo();
-
-    requestAnimationFrame(function() {
-      scene.view.setParameters(scene.data.initialViewParameters);
-      startAutorotate();
-    });
-
-    updateSceneName(scene);
-    updateSceneList(scene);
-  }
-
-  function updateSceneName(scene) {
-    sceneNameElement.innerHTML = sanitize(scene.data.name);
-  }
-
-  function updateSceneList(scene) {
-    for (var i = 0; i < sceneElements.length; i++) {
-      var el = sceneElements[i];
-      if (el.getAttribute('data-id') === scene.data.id) {
-        el.classList.add('current');
-      } else {
-        el.classList.remove('current');
-      }
-    }
-  }
-
-  function showSceneList() {
-    sceneListElement.classList.add('enabled');
-    sceneListToggleElement.classList.add('enabled');
-  }
-
-  function hideSceneList() {
-    sceneListElement.classList.remove('enabled');
-    sceneListToggleElement.classList.remove('enabled');
-  }
-
-  function toggleSceneList() {
-    sceneListElement.classList.toggle('enabled');
-    sceneListToggleElement.classList.toggle('enabled');
-  }
-
-  function startAutorotate() {
-    if (!autorotateToggleElement.classList.contains('enabled')) {
-      return;
-    }
-    viewer.startMovement(autorotate);
-    viewer.setIdleMovement(3000, autorotate);
-  }
-
-  function stopAutorotate() {
-    viewer.stopMovement();
-    viewer.setIdleMovement(Infinity);
-  }
-
-  function toggleAutorotate() {
-    if (autorotateToggleElement.classList.contains('enabled')) {
-      autorotateToggleElement.classList.remove('enabled');
-      stopAutorotate();
-    } else {
-      autorotateToggleElement.classList.add('enabled');
-      startAutorotate();
-    }
-  }
-
-  function createLinkHotspotElement(hotspot) {
-
-    var wrapper = document.createElement('div');
-    wrapper.classList.add('hotspot');
-    wrapper.classList.add('link-hotspot');
-
-    var icon = document.createElement('img');
-    icon.src = 'img/pin2.svg';
-    icon.classList.add('link-hotspot-icon');
-
-    var transformProperties = ['-ms-transform', '-webkit-transform', 'transform'];
-    for (var i = 0; i < transformProperties.length; i++) {
-      var property = transformProperties[i];
-      icon.style[property] = 'rotate(' + hotspot.rotation + 'rad)';
-    }
-
-    wrapper.addEventListener('click', function() {
-      switchScene(findSceneById(hotspot.target));
-    });
-
-    stopTouchAndScrollEventPropagation(wrapper);
-
-    var tooltip = document.createElement('div');
-    tooltip.classList.add('hotspot-tooltip');
-    tooltip.classList.add('link-hotspot-tooltip');
-    tooltip.innerHTML = findSceneDataById(hotspot.target).name;
-
-    wrapper.appendChild(icon);
-    wrapper.appendChild(tooltip);
-
-    return wrapper;
-  }
-
-  function createInfoHotspotElement(hotspot) {
-
-    var wrapper = document.createElement('div');
-    wrapper.classList.add('hotspot');
-    wrapper.classList.add('info-hotspot');
-
-    var header = document.createElement('div');
-    header.classList.add('info-hotspot-header');
-
-    var iconWrapper = document.createElement('div');
-    iconWrapper.classList.add('info-hotspot-icon-wrapper');
-    var icon = document.createElement('img');
-    icon.src = 'img/info.svg';
-    icon.classList.add('info-hotspot-icon');
-    iconWrapper.appendChild(icon);
-
-    var titleWrapper = document.createElement('div');
-    titleWrapper.classList.add('info-hotspot-title-wrapper');
-    var title = document.createElement('div');
-    title.classList.add('info-hotspot-title');
-    title.innerHTML = hotspot.title;
-    titleWrapper.appendChild(title);
-
-    var closeWrapper = document.createElement('div');
-    closeWrapper.classList.add('info-hotspot-close-wrapper');
-    var closeIcon = document.createElement('img');
-    closeIcon.src = 'img/close.svg';
-    closeIcon.classList.add('info-hotspot-close-icon');
-    closeWrapper.appendChild(closeIcon);
-
-    header.appendChild(iconWrapper);
-    header.appendChild(titleWrapper);
-    header.appendChild(closeWrapper);
-
-    var text = document.createElement('div');
-    text.classList.add('info-hotspot-text');
-    text.innerHTML = hotspot.text;
-
-    wrapper.appendChild(header);
-    wrapper.appendChild(text);
-
-    var modal = document.createElement('div');
-    modal.innerHTML = wrapper.innerHTML;
-    modal.classList.add('info-hotspot-modal');
-    document.body.appendChild(modal);
-
-    var toggle = function() {
-      wrapper.classList.toggle('visible');
-      modal.classList.toggle('visible');
-    };
-
-    wrapper.querySelector('.info-hotspot-header').addEventListener('click', toggle);
-    modal.querySelector('.info-hotspot-close-wrapper').addEventListener('click', toggle);
-
-    stopTouchAndScrollEventPropagation(wrapper);
-
-    return wrapper;
-  }
-
-  function stopTouchAndScrollEventPropagation(element, eventList) {
-    var eventList = ['touchstart', 'touchmove', 'touchend', 'touchcancel',
-                     'wheel', 'mousewheel'];
-    for (var i = 0; i < eventList.length; i++) {
-      element.addEventListener(eventList[i], function(event) {
-        event.stopPropagation();
-      });
-    }
-  }
-
-  function findSceneById(id) {
-    for (var i = 0; i < scenes.length; i++) {
-      if (scenes[i].data.id === id) {
-        return scenes[i];
-      }
-    }
-    return null;
-  }
-
-  function findSceneDataById(id) {
-    for (var i = 0; i < data.scenes.length; i++) {
-      if (data.scenes[i].id === id) {
-        return data.scenes[i];
-      }
-    }
-    return null;
-  }
-
-  switchScene(scenes[0]);
-
-})();
+}
+
+.viewControlButton .icon {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 30px;
+  height: 30px;
+}
+
+.viewControlButton-1 {
+  margin-left: -145px;
+}
+.viewControlButton-2 {
+  margin-left: -95px;
+}
+.viewControlButton-3 {
+  margin-left: -45px;
+}
+.viewControlButton-4 {
+  margin-left: 5px;
+}
+.viewControlButton-5 {
+  margin-left: 55px;
+}
+.viewControlButton-6 {
+  margin-left: 105px;
+}
+
+/* ============================================================
+   FIX: Псевдо-фуллскрин для iOS Safari
+   ============================================================ */
+body.pseudo-fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  z-index: 999999 !important;
+}
+
+body.pseudo-fullscreen #pano {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 999999 !important;
+}
+
+body.pseudo-fullscreen #titleBar,
+body.pseudo-fullscreen #sceneList,
+body.pseudo-fullscreen #sceneListToggle,
+body.pseudo-fullscreen #fullscreenToggle,
+body.pseudo-fullscreen #autorotateToggle,
+body.pseudo-fullscreen .viewControlButton,
+body.pseudo-fullscreen .hotspot {
+  z-index: 1000000 !important;
+}
+
+body.pseudo-fullscreen #fullscreenToggle,
+body.pseudo-fullscreen #sceneListToggle {
+  position: fixed !important;
+}
+
+body.pseudo-fullscreen #titleBar {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+}
+
+body.pseudo-fullscreen #sceneList {
+  position: fixed !important;
+}
