@@ -4,12 +4,7 @@ var APP_DATA = {
       "id": "0--",
       "name": "Главный вид",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
+               {
           "tileSize": 512,
           "size": 512
         },
@@ -61,11 +56,6 @@ var APP_DATA = {
       "name": "Дрон 1",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -110,11 +100,6 @@ var APP_DATA = {
       "id": "2--2",
       "name": "Дрон 2",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -166,11 +151,6 @@ var APP_DATA = {
       "id": "3--3",
       "name": "Дрон 3",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -229,11 +209,6 @@ var APP_DATA = {
       "name": "Нижний участок 1 Старт",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -278,11 +253,6 @@ var APP_DATA = {
       "id": "5---2",
       "name": "Нижний участок 2",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -335,11 +305,6 @@ var APP_DATA = {
       "name": "Нижний участок 3",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -384,11 +349,6 @@ var APP_DATA = {
       "id": "7---4",
       "name": "Нижний участок 4",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -441,11 +401,6 @@ var APP_DATA = {
       "name": "Нижний участок 5",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -485,11 +440,6 @@ var APP_DATA = {
       "name": "Въездные ворота",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -528,11 +478,6 @@ var APP_DATA = {
       "id": "10---1",
       "name": "Верхний участок 1",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -585,11 +530,6 @@ var APP_DATA = {
       "name": "Верхний участок 2",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -629,11 +569,6 @@ var APP_DATA = {
       "name": "Верхний участок 3",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -672,11 +607,6 @@ var APP_DATA = {
       "id": "13-2----1",
       "name": "2 этаж — Прихожая 1",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -723,11 +653,6 @@ var APP_DATA = {
       "name": "2 этаж — Гардероб",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -760,11 +685,6 @@ var APP_DATA = {
       "id": "15-2----2",
       "name": "2 этаж — Прихожая 2",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -823,11 +743,6 @@ var APP_DATA = {
       "name": "2 этаж — Коридор",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -879,11 +794,6 @@ var APP_DATA = {
       "name": "2 этаж — Санузел",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -916,11 +826,6 @@ var APP_DATA = {
       "id": "18-2----1",
       "name": "2 этаж — Спальня 1",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -973,11 +878,6 @@ var APP_DATA = {
       "name": "2 этаж — Спальня 1",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1029,11 +929,6 @@ var APP_DATA = {
       "name": "2 этаж — Спальня 1 Гардероб",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1073,11 +968,6 @@ var APP_DATA = {
       "name": "2 этаж — Спальня 1 Ванная",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1110,11 +1000,6 @@ var APP_DATA = {
       "id": "22-2----",
       "name": "2 этаж —  Балкон",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -1154,11 +1039,6 @@ var APP_DATA = {
       "id": "23-2----2",
       "name": "2 этаж — Спальня 2",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -1211,11 +1091,6 @@ var APP_DATA = {
       "name": "2 этаж — Спальня 2",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1267,11 +1142,6 @@ var APP_DATA = {
       "name": "2 этаж — Спальня 2 Гардероб",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1310,11 +1180,6 @@ var APP_DATA = {
       "id": "26-2----2-",
       "name": "2 этаж — Спальня 2 Гардероб",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -1361,11 +1226,6 @@ var APP_DATA = {
       "name": "2 этаж — Спальня 2 Ванная",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1405,11 +1265,6 @@ var APP_DATA = {
       "name": "2 этаж — Спальня 2 Ванная",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1442,11 +1297,6 @@ var APP_DATA = {
       "id": "29--1",
       "name": "Лестница 1",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -1487,11 +1337,6 @@ var APP_DATA = {
       "name": "Лестница 2",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1530,11 +1375,6 @@ var APP_DATA = {
       "id": "31-1---",
       "name": "1 этаж — Коридор",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -1581,11 +1421,6 @@ var APP_DATA = {
       "name": "1 этаж — Коридор",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1630,11 +1465,6 @@ var APP_DATA = {
       "id": "33-1----",
       "name": "1 этаж — Кухня-гостиная",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -1705,11 +1535,6 @@ var APP_DATA = {
       "name": "1 этаж — Кухня-гостиная",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1760,11 +1585,6 @@ var APP_DATA = {
       "id": "35-1----",
       "name": "1 этаж — Кухня-гостиная",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -1817,11 +1637,6 @@ var APP_DATA = {
       "name": "1 этаж — Кухня-гостиная",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1867,11 +1682,6 @@ var APP_DATA = {
       "name": "1 этаж — Кухня-гостиная",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1910,11 +1720,6 @@ var APP_DATA = {
       "id": "38-1---",
       "name": "1 этаж — Кабинет",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -1955,11 +1760,6 @@ var APP_DATA = {
       "name": "1 этаж — Кабинет",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -1992,11 +1792,6 @@ var APP_DATA = {
       "id": "40-1----",
       "name": "1 этаж — Летняя кухня",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2036,11 +1831,6 @@ var APP_DATA = {
       "id": "41-1---",
       "name": "1 этаж — Терраса",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2092,11 +1882,6 @@ var APP_DATA = {
       "id": "42-1---",
       "name": "1 этаж — Терраса",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2155,11 +1940,6 @@ var APP_DATA = {
       "name": "1 этаж — Терраса",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2217,11 +1997,6 @@ var APP_DATA = {
       "name": "Хозблок — Зона отдыха",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2266,11 +2041,6 @@ var APP_DATA = {
       "id": "45----",
       "name": "Хозблок — Зона отдыха",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2317,11 +2087,6 @@ var APP_DATA = {
       "name": "Хозблок — Коридор",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2366,11 +2131,6 @@ var APP_DATA = {
       "id": "47---",
       "name": "Хозблок — Коридор",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2429,11 +2189,6 @@ var APP_DATA = {
       "name": "Хозблок — Санузел",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2467,11 +2222,6 @@ var APP_DATA = {
       "name": "Хозблок — Спорт-зал",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2504,11 +2254,6 @@ var APP_DATA = {
       "id": "50---",
       "name": "Хозблок — Душевая",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2549,11 +2294,6 @@ var APP_DATA = {
       "name": "Хозблок — Сауна",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2586,11 +2326,6 @@ var APP_DATA = {
       "id": "52-3---",
       "name": "3 этаж — Коридор",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2643,11 +2378,6 @@ var APP_DATA = {
       "name": "3 этаж — Спальня 3",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2693,11 +2423,6 @@ var APP_DATA = {
       "name": "3 этаж — Спальня 3 Гардероб",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2737,11 +2462,6 @@ var APP_DATA = {
       "name": "3 этаж — Спальня 3 Ванная",
       "levels": [
         {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
-        {
           "tileSize": 512,
           "size": 512
         },
@@ -2774,11 +2494,6 @@ var APP_DATA = {
       "id": "56-3---",
       "name": "3 этаж — Терраса",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2830,11 +2545,6 @@ var APP_DATA = {
       "id": "57-3---",
       "name": "3 этаж — Терраса",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
@@ -2892,11 +2602,6 @@ var APP_DATA = {
       "id": "58-3---",
       "name": "3 этаж — Терраса",
       "levels": [
-        {
-          "tileSize": 256,
-          "size": 256,
-          "fallbackOnly": true
-        },
         {
           "tileSize": 512,
           "size": 512
