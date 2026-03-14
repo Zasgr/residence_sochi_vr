@@ -9,42 +9,78 @@
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
   // ============================================================
-  // CSS для псевдо-полноэкранного режима (iOS Safari фоллбэк)
+  // Инжектируемые стили: псевдо-фуллскрин + titleBar под кнопку
   // ============================================================
-  var pseudoFullscreenCSS = document.createElement('style');
-  pseudoFullscreenCSS.textContent = [
+  var injectedCSS = document.createElement('style');
+  injectedCSS.textContent = [
+
+    // --- Псевдо-полный экран (iOS и другие без Fullscreen API) ---
     'body.pseudo-fullscreen {',
     '  position: fixed !important;',
     '  top: 0 !important;',
     '  left: 0 !important;',
-    '  width: 100vw !important;',
-    '  height: 100vh !important;',
+    '  width: 100% !important;',
+    '  height: 100% !important;',
     '  margin: 0 !important;',
     '  padding: 0 !important;',
     '  overflow: hidden !important;',
     '  z-index: 999999 !important;',
     '}',
+
     'body.pseudo-fullscreen #pano {',
     '  position: fixed !important;',
     '  top: 0 !important;',
     '  left: 0 !important;',
-    '  width: 100vw !important;',
-    '  height: 100vh !important;',
+    '  width: 100% !important;',
+    '  height: 100% !important;',
     '  z-index: 999999 !important;',
     '}',
+
     'body.pseudo-fullscreen #titleBar,',
     'body.pseudo-fullscreen #sceneList,',
     'body.pseudo-fullscreen #sceneListToggle,',
     'body.pseudo-fullscreen #fullscreenToggle,',
     'body.pseudo-fullscreen #autorotateToggle,',
-    'body.pseudo-fullscreen .viewControlButton {',
+    'body.pseudo-fullscreen .viewControlButton,',
+    'body.pseudo-fullscreen .hotspot {',
     '  z-index: 1000000 !important;',
     '}',
-    'body.pseudo-fullscreen #fullscreenToggle {',
+
+    'body.pseudo-fullscreen #fullscreenToggle,',
+    'body.pseudo-fullscreen #sceneListToggle {',
     '  position: fixed !important;',
+    '}',
+
+    'body.pseudo-fullscreen #titleBar {',
+    '  position: fixed !important;',
+    '  left: 0 !important;',
+    '  top: 0 !important;',
+    '}',
+
+    'body.pseudo-fullscreen #sceneList {',
+    '  position: fixed !important;',
+    '}',
+
+    // --- titleBar расширен под кнопку fullscreen ---
+    '#titleBar {',
+    '  right: 0 !important;',
+    '  padding-right: 120px !important;',
+    '}',
+
+    // На мобильных — под обе кнопки (menu + fullscreen)
+    '@media (max-width: 500px), (max-height: 500px) {',
+    '  #titleBar {',
+    '    padding-right: 100px !important;',
+    '  }',
+    '}',
+
+    // Кнопка fullscreen всегда видна
+    '.fullscreen-disabled #fullscreenToggle {',
+    '  display: block !important;',
     '}'
+
   ].join('\n');
-  document.head.appendChild(pseudoFullscreenCSS);
+  document.head.appendChild(injectedCSS);
   // ============================================================
 
   var panoElement = document.querySelector('#pano');
@@ -186,17 +222,31 @@
   autorotateToggleElement.addEventListener('click', toggleAutorotate);
 
   // ============================================================
-  // ПОЛНОЭКРАННЫЙ РЕЖИМ: принудительно включён, с iOS-фоллбэком
+  // ПОЛНОЭКРАННЫЙ РЕЖИМ
   // ============================================================
-  // Убираем класс-блокировку и добавляем класс-разрешение
+  // Принудительно показываем кнопку
   document.body.classList.remove('fullscreen-disabled');
   document.body.classList.add('fullscreen-enabled');
 
-  if (screenfull && screenfull.enabled) {
-    // Браузер поддерживает Fullscreen API (Chrome, Firefox, Android, десктоп)
-    fullscreenToggleElement.addEventListener('click', function() {
+  // На iOS всегда используем псевдо-фуллскрин,
+  // потому что Safari на iPhone не поддерживает Fullscreen API
+  var useNativeFullscreen = !isIOS && screenfull && screenfull.enabled;
+
+  // Переменная для отслеживания состояния псевдо-фуллскрина
+  var isPseudoFullscreen = false;
+
+  fullscreenToggleElement.addEventListener('click', function() {
+    if (useNativeFullscreen) {
+      // Десктоп, Android — нативный полный экран
       screenfull.toggle();
-    });
+    } else {
+      // iOS и прочие — псевдо-полный экран через CSS
+      togglePseudoFullscreen();
+    }
+  });
+
+  // Обработка нативного полного экрана
+  if (useNativeFullscreen) {
     screenfull.on('change', function() {
       if (screenfull.isFullscreen) {
         fullscreenToggleElement.classList.add('enabled');
@@ -204,21 +254,62 @@
         fullscreenToggleElement.classList.remove('enabled');
       }
     });
-  } else {
-    // iOS Safari и другие без Fullscreen API — псевдо-полный экран через CSS
-    fullscreenToggleElement.addEventListener('click', function() {
-      document.body.classList.toggle('pseudo-fullscreen');
-      fullscreenToggleElement.classList.toggle('enabled');
-
-      // Прокручиваем вверх, чтобы скрыть адресную строку Safari
-      window.scrollTo(0, 1);
-
-      // Пересчитываем размер вьювера после смены режима
-      setTimeout(function() {
-        viewer.updateSize();
-      }, 100);
-    });
   }
+
+  function togglePseudoFullscreen() {
+    isPseudoFullscreen = !isPseudoFullscreen;
+
+    if (isPseudoFullscreen) {
+      document.body.classList.add('pseudo-fullscreen');
+      fullscreenToggleElement.classList.add('enabled');
+
+      // Пытаемся скрыть адресную строку Safari
+      window.scrollTo(0, 0);
+      setTimeout(function() { window.scrollTo(0, 1); }, 50);
+
+      // Блокируем скролл страницы
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.classList.remove('pseudo-fullscreen');
+      fullscreenToggleElement.classList.remove('enabled');
+
+      // Возвращаем скролл
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+
+    // Обновляем размер canvas после анимации
+    setTimeout(function() {
+      viewer.updateSize();
+    }, 100);
+    setTimeout(function() {
+      viewer.updateSize();
+    }, 300);
+  }
+
+  // Выход из псевдо-фуллскрина по кнопке «Назад» на Android
+  window.addEventListener('popstate', function() {
+    if (isPseudoFullscreen) {
+      togglePseudoFullscreen();
+    }
+  });
+
+  // Обработка смены ориентации экрана — пересчёт canvas
+  window.addEventListener('orientationchange', function() {
+    setTimeout(function() {
+      viewer.updateSize();
+    }, 200);
+    setTimeout(function() {
+      viewer.updateSize();
+    }, 500);
+  });
+
+  window.addEventListener('resize', function() {
+    setTimeout(function() {
+      viewer.updateSize();
+    }, 100);
+  });
   // ============================================================
 
   sceneListToggleElement.addEventListener('click', toggleSceneList);
