@@ -44,9 +44,13 @@
     document.body.classList.add('tooltip-fallback');
   }
 
+  // preserveDrawingBuffer нужен для захвата скриншота canvas
   var viewerOpts = {
     controls: {
       mouseViewMode: data.settings.mouseViewMode
+    },
+    stage: {
+      preserveDrawingBuffer: true
     }
   };
 
@@ -87,39 +91,73 @@
   }, 200);
 
   // ============================================================
-  // ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА ВСЕХ ТАЙЛОВ
-  // Мгновенное затемнение → скрытое сканирование → плавный выход
+  // ОВЕРЛЕЙ С БЛЮРОМ
   // ============================================================
   var forceLoadId = 0;
-  var FADE_OUT_MS = 600;
+  var FADE_OUT_MS = 500;
+  var BLUR_AMOUNT = 20;       // пиксели блюра
+  var BLUR_SCALE = 1.15;      // масштаб чтобы скрыть прозрачные края
   var currentOverlay = null;
 
-  // Мгновенный чёрный оверлей
-  function createOverlay() {
-    // Удаляем предыдущий если остался
+  function captureScreenshot() {
+    try {
+      var cvs = panoElement.querySelector('canvas');
+      if (cvs) {
+        return cvs.toDataURL('image/jpeg', 0.5);
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function createBlurOverlay(screenshotDataUrl) {
+    // Удаляем предыдущий
     if (currentOverlay && currentOverlay.parentNode) {
       currentOverlay.parentNode.removeChild(currentOverlay);
     }
+
     var overlay = document.createElement('div');
-    overlay.style.cssText =
-      'position:absolute;top:0;left:0;width:100%;height:100%;' +
-      'z-index:999;pointer-events:none;background-color:#000;opacity:1;';
+
+    if (screenshotDataUrl && screenshotDataUrl.length > 500) {
+      overlay.style.cssText =
+        'position:absolute;top:0;left:0;width:100%;height:100%;' +
+        'z-index:999;pointer-events:none;' +
+        'background-image:url(' + screenshotDataUrl + ');' +
+        'background-size:cover;background-position:center;' +
+        '-webkit-filter:blur(' + BLUR_AMOUNT + 'px);' +
+        'filter:blur(' + BLUR_AMOUNT + 'px);' +
+        '-webkit-transform:scale(' + BLUR_SCALE + ');' +
+        'transform:scale(' + BLUR_SCALE + ');' +
+        'opacity:1;';
+    } else {
+      // Фоллбэк — чёрный экран если скриншот не удался
+      overlay.style.cssText =
+        'position:absolute;top:0;left:0;width:100%;height:100%;' +
+        'z-index:999;pointer-events:none;background-color:#000;opacity:1;';
+    }
+
     panoElement.appendChild(overlay);
     currentOverlay = overlay;
     return overlay;
   }
 
-  // Плавное исчезновение
   function fadeOutOverlay(overlay, callback) {
     if (!overlay || !overlay.parentNode) {
       if (callback) callback();
       return;
     }
-    overlay.style.transition = 'opacity ' + FADE_OUT_MS + 'ms ease-out';
-    // Запускаем на следующем кадре чтобы transition сработал
+
+    overlay.style.transition =
+      'opacity ' + FADE_OUT_MS + 'ms ease-out, ' +
+      '-webkit-filter ' + FADE_OUT_MS + 'ms ease-out, ' +
+      'filter ' + FADE_OUT_MS + 'ms ease-out';
+
     requestAnimationFrame(function() {
       overlay.style.opacity = '0';
+      // Одновременно убираем блюр для эффекта «фокусировки»
+      overlay.style.webkitFilter = 'blur(0px)';
+      overlay.style.filter = 'blur(0px)';
     });
+
     setTimeout(function() {
       if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
@@ -140,6 +178,9 @@
     }
   }
 
+  // ============================================================
+  // ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА ВСЕХ ТАЙЛОВ
+  // ============================================================
   function forceLoadAllTiles(sceneObj, overlay, onComplete) {
     var myId = ++forceLoadId;
 
@@ -147,7 +188,6 @@
     var initParams = sceneObj.data.initialViewParameters;
     var fov = initParams.fov || 1.5;
 
-    // 26 позиций — полное покрытие сферы
     var positions = [];
     var yaws = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
     var pitches = [-Math.PI / 2, -Math.PI / 4, 0, Math.PI / 4, Math.PI / 2];
@@ -182,16 +222,13 @@
         }
         requestAnimationFrame(tick);
       } else {
-        // Возвращаем исходный ракурс
         view.setParameters(initParams);
 
-        // Ждём 3 кадра чтобы финальный кадр отрендерился
         requestAnimationFrame(function() {
           requestAnimationFrame(function() {
             requestAnimationFrame(function() {
               if (myId !== forceLoadId) { removeOverlay(overlay); return; }
 
-              // Плавно убираем затемнение
               fadeOutOverlay(overlay, function() {
                 if (onComplete) onComplete();
               });
@@ -418,31 +455,39 @@
 
   // ============================================================
   // ПЕРЕКЛЮЧЕНИЕ СЦЕНЫ
-  // 1. Мгновенный чёрный экран
+  // 1. Скриншот текущего кадра → блюр-оверлей
   // 2. Переключение сцены за оверлеем
   // 3. Сканирование всех граней
-  // 4. Плавное проявление готовой панорамы
+  // 4. Плавное проявление с эффектом фокусировки
   // ============================================================
+  var isFirstScene = true;
+
   function switchScene(scene) {
     forceLoadId++;
     stopAutorotate();
     bgPreloader.clear();
 
-    // 1. Мгновенно закрываем чёрным
-    var overlay = createOverlay();
+    // 1. Захватываем скриншот ДО переключения (кроме первого запуска)
+    var screenshot = null;
+    if (!isFirstScene) {
+      screenshot = captureScreenshot();
+    }
+    isFirstScene = false;
 
-    // 2. Переключаем сцену за оверлеем (пользователь ничего не видит)
+    // 2. Мгновенно показываем блюр предыдущего кадра
+    var overlay = createBlurOverlay(screenshot);
+
+    // 3. Переключаем сцену за оверлеем
     scene.view.setParameters(scene.data.initialViewParameters);
     scene.scene.switchTo();
 
     requestAnimationFrame(function() {
       scene.view.setParameters(scene.data.initialViewParameters);
 
-      // 3. Даём время на загрузку начальных тайлов, затем сканируем
+      // 4. Ждём начальные тайлы, затем сканируем
       setTimeout(function() {
 
         forceLoadAllTiles(scene, overlay, function() {
-          // 4. После fade-out оверлея — запускаем autorotate и предзагрузку
           startAutorotate();
 
           var hotspots = scene.data.linkHotspots || [];
