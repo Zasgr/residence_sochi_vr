@@ -88,36 +88,44 @@
 
   // ============================================================
   // ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА ВСЕХ ТАЙЛОВ
-  // Тёмный оверлей с плавным появлением и исчезновением
+  // Мгновенное затемнение → скрытое сканирование → плавный выход
   // ============================================================
   var forceLoadId = 0;
-  var FADE_IN_MS = 300;
-  var FADE_OUT_MS = 500;
+  var FADE_OUT_MS = 600;
+  var currentOverlay = null;
 
+  // Мгновенный чёрный оверлей
   function createOverlay() {
+    // Удаляем предыдущий если остался
+    if (currentOverlay && currentOverlay.parentNode) {
+      currentOverlay.parentNode.removeChild(currentOverlay);
+    }
     var overlay = document.createElement('div');
     overlay.style.cssText =
       'position:absolute;top:0;left:0;width:100%;height:100%;' +
-      'z-index:999;pointer-events:none;background-color:#000;' +
-      'opacity:0;transition:opacity ' + FADE_IN_MS + 'ms ease-in;';
+      'z-index:999;pointer-events:none;background-color:#000;opacity:1;';
     panoElement.appendChild(overlay);
-    // Запускаем fade-in на следующем кадре (чтобы transition сработал)
-    requestAnimationFrame(function() {
-      overlay.style.opacity = '1';
-    });
+    currentOverlay = overlay;
     return overlay;
   }
 
+  // Плавное исчезновение
   function fadeOutOverlay(overlay, callback) {
     if (!overlay || !overlay.parentNode) {
       if (callback) callback();
       return;
     }
     overlay.style.transition = 'opacity ' + FADE_OUT_MS + 'ms ease-out';
-    overlay.style.opacity = '0';
+    // Запускаем на следующем кадре чтобы transition сработал
+    requestAnimationFrame(function() {
+      overlay.style.opacity = '0';
+    });
     setTimeout(function() {
       if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
+      }
+      if (currentOverlay === overlay) {
+        currentOverlay = null;
       }
       if (callback) callback();
     }, FADE_OUT_MS);
@@ -127,16 +135,19 @@
     if (overlay && overlay.parentNode) {
       overlay.parentNode.removeChild(overlay);
     }
+    if (currentOverlay === overlay) {
+      currentOverlay = null;
+    }
   }
 
-  function forceLoadAllTiles(sceneObj, onComplete) {
+  function forceLoadAllTiles(sceneObj, overlay, onComplete) {
     var myId = ++forceLoadId;
 
     var view = sceneObj.view;
     var initParams = sceneObj.data.initialViewParameters;
     var fov = initParams.fov || 1.5;
 
-    // 26 позиций — полное покрытие сферы с запасом
+    // 26 позиций — полное покрытие сферы
     var positions = [];
     var yaws = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
     var pitches = [-Math.PI / 2, -Math.PI / 4, 0, Math.PI / 4, Math.PI / 2];
@@ -153,52 +164,44 @@
     positions.push({ yaw: Math.PI / 4, pitch: -1.3, fov: fov });
     positions.push({ yaw: -Math.PI / 4, pitch: 1.3, fov: fov });
 
-    // Создаём тёмный оверлей с плавным появлением
-    var overlay = createOverlay();
+    var idx = 0;
+    var framesPerPosition = 2;
+    var frameCount = 0;
 
-    // Ждём завершения fade-in перед сканированием
-    setTimeout(function() {
+    function tick() {
       if (myId !== forceLoadId) { removeOverlay(overlay); return; }
 
-      var idx = 0;
-      var framesPerPosition = 2;
-      var frameCount = 0;
+      if (idx < positions.length) {
+        if (frameCount === 0) {
+          view.setParameters(positions[idx]);
+        }
+        frameCount++;
+        if (frameCount >= framesPerPosition) {
+          frameCount = 0;
+          idx++;
+        }
+        requestAnimationFrame(tick);
+      } else {
+        // Возвращаем исходный ракурс
+        view.setParameters(initParams);
 
-      function tick() {
-        if (myId !== forceLoadId) { removeOverlay(overlay); return; }
-
-        if (idx < positions.length) {
-          if (frameCount === 0) {
-            view.setParameters(positions[idx]);
-          }
-          frameCount++;
-          if (frameCount >= framesPerPosition) {
-            frameCount = 0;
-            idx++;
-          }
-          requestAnimationFrame(tick);
-        } else {
-          // Возвращаем исходный ракурс
-          view.setParameters(initParams);
-
-          // Ждём 3 кадра для финального рендера, потом плавно убираем оверлей
+        // Ждём 3 кадра чтобы финальный кадр отрендерился
+        requestAnimationFrame(function() {
           requestAnimationFrame(function() {
             requestAnimationFrame(function() {
-              requestAnimationFrame(function() {
-                if (myId !== forceLoadId) { removeOverlay(overlay); return; }
+              if (myId !== forceLoadId) { removeOverlay(overlay); return; }
 
-                fadeOutOverlay(overlay, function() {
-                  if (onComplete) onComplete();
-                });
+              // Плавно убираем затемнение
+              fadeOutOverlay(overlay, function() {
+                if (onComplete) onComplete();
               });
             });
           });
-        }
+        });
       }
+    }
 
-      requestAnimationFrame(tick);
-
-    }, FADE_IN_MS);
+    requestAnimationFrame(tick);
   }
 
   // ============================================================
@@ -413,20 +416,33 @@
     return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;');
   }
 
+  // ============================================================
+  // ПЕРЕКЛЮЧЕНИЕ СЦЕНЫ
+  // 1. Мгновенный чёрный экран
+  // 2. Переключение сцены за оверлеем
+  // 3. Сканирование всех граней
+  // 4. Плавное проявление готовой панорамы
+  // ============================================================
   function switchScene(scene) {
     forceLoadId++;
     stopAutorotate();
     bgPreloader.clear();
 
+    // 1. Мгновенно закрываем чёрным
+    var overlay = createOverlay();
+
+    // 2. Переключаем сцену за оверлеем (пользователь ничего не видит)
     scene.view.setParameters(scene.data.initialViewParameters);
     scene.scene.switchTo();
 
     requestAnimationFrame(function() {
       scene.view.setParameters(scene.data.initialViewParameters);
 
+      // 3. Даём время на загрузку начальных тайлов, затем сканируем
       setTimeout(function() {
 
-        forceLoadAllTiles(scene, function() {
+        forceLoadAllTiles(scene, overlay, function() {
+          // 4. После fade-out оверлея — запускаем autorotate и предзагрузку
           startAutorotate();
 
           var hotspots = scene.data.linkHotspots || [];
