@@ -44,9 +44,13 @@
     document.body.classList.add('tooltip-fallback');
   }
 
+  // preserveDrawingBuffer нужен для скриншота canvas
   var viewerOpts = {
     controls: {
       mouseViewMode: data.settings.mouseViewMode
+    },
+    stage: {
+      preserveDrawingBuffer: true
     }
   };
 
@@ -87,128 +91,162 @@
   }, 200);
 
   // ============================================================
-  // ПРЕДЗАГРУЗЧИК ТАЙЛОВ
+  // ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА ВСЕХ ТАЙЛОВ
+  // Программно прокручиваем камеру через все 6 граней куба.
+  // Marzipano вынужден подгрузить тайлы и создать WebGL текстуры.
+  // Пользователь ничего не видит — поверх canvas лежит оверлей.
   // ============================================================
-  var preloader = {
+  var forceLoadId = 0; // уникальный ID текущей операции
 
+  function forceLoadAllTiles(sceneObj, onComplete) {
+    var myId = ++forceLoadId;
+
+    var view = sceneObj.view;
+    var initParams = sceneObj.data.initialViewParameters;
+    var fov = initParams.fov || 1.5;
+
+    // 26 позиций — полное покрытие сферы с запасом
+    var positions = [];
+    var yaws = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+    var pitches = [-Math.PI / 2, -Math.PI / 4, 0, Math.PI / 4, Math.PI / 2];
+
+    for (var p = 0; p < pitches.length; p++) {
+      for (var y = 0; y < yaws.length; y++) {
+        positions.push({ yaw: yaws[y], pitch: pitches[p], fov: fov });
+      }
+    }
+    // Добавляем точки зенита и надира с разными yaw для надёжности
+    positions.push({ yaw: 0, pitch: -1.5, fov: fov });
+    positions.push({ yaw: Math.PI, pitch: -1.5, fov: fov });
+    positions.push({ yaw: 0, pitch: 1.5, fov: fov });
+    positions.push({ yaw: Math.PI, pitch: 1.5, fov: fov });
+    positions.push({ yaw: Math.PI / 4, pitch: -1.3, fov: fov });
+    positions.push({ yaw: -Math.PI / 4, pitch: 1.3, fov: fov });
+
+    // Создаём оверлей
+    var overlay = document.createElement('div');
+    overlay.style.cssText =
+      'position:absolute;top:0;left:0;width:100%;height:100%;' +
+      'z-index:999;pointer-events:none;background-color:#000;';
+    panoElement.appendChild(overlay);
+
+    // Делаем скриншот начального кадра через 2 кадра рендера
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        if (myId !== forceLoadId) { removeOverlay(overlay); return; }
+
+        try {
+          var cvs = panoElement.querySelector('canvas');
+          if (cvs) {
+            var dataUrl = cvs.toDataURL('image/jpeg', 0.6);
+            if (dataUrl && dataUrl.length > 500) {
+              overlay.style.backgroundImage = 'url(' + dataUrl + ')';
+              overlay.style.backgroundSize = 'cover';
+              overlay.style.backgroundPosition = 'center';
+              overlay.style.backgroundColor = 'transparent';
+            }
+          }
+        } catch (e) {}
+
+        // Начинаем сканирование
+        var idx = 0;
+        // На каждую позицию даём 2 кадра чтобы Marzipano успел
+        // запросить тайлы и начать рендер
+        var framesPerPosition = 2;
+        var frameCount = 0;
+
+        function tick() {
+          if (myId !== forceLoadId) { removeOverlay(overlay); return; }
+
+          if (idx < positions.length) {
+            if (frameCount === 0) {
+              view.setParameters(positions[idx]);
+            }
+            frameCount++;
+            if (frameCount >= framesPerPosition) {
+              frameCount = 0;
+              idx++;
+            }
+            requestAnimationFrame(tick);
+          } else {
+            // Возвращаем исходный ракурс
+            view.setParameters(initParams);
+            // Ждём 3 кадра для финального рендера
+            requestAnimationFrame(function() {
+              requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                  if (myId !== forceLoadId) { removeOverlay(overlay); return; }
+                  removeOverlay(overlay);
+                  if (onComplete) onComplete();
+                });
+              });
+            });
+          }
+        }
+
+        requestAnimationFrame(tick);
+      });
+    });
+  }
+
+  function removeOverlay(overlay) {
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
+    }
+  }
+
+  // ============================================================
+  // ФОНОВЫЙ HTTP-ПРЕДЗАГРУЗЧИК (для связанных и прочих сцен)
+  // Кеширует изображения в HTTP-кеш браузера, чтобы при
+  // переключении на другую сцену тайлы грузились мгновенно.
+  // ============================================================
+  var bgPreloader = {
     queue: [],
     active: 0,
-    maxConcurrent: isMobile ? 4 : 6,
-    loaded: {},       // URL → true (уже загружен или грузится)
-    paused: false,
+    maxActive: isMobile ? 2 : 4,
+    seen: {},
 
-    // Получить все URL тайлов для сцены
-    getTileUrls: function(sceneId, levels, maxLevelIdx) {
+    addScene: function(sceneId, levels) {
       var faces = ['b', 'd', 'f', 'l', 'r', 'u'];
-      var urls = [];
-      var end = (maxLevelIdx !== undefined) ? maxLevelIdx : levels.length - 1;
-
-      for (var z = 0; z <= end; z++) {
-        var level = levels[z];
-        var tilesPerSide = Math.ceil(level.size / level.tileSize);
-
-        for (var fi = 0; fi < faces.length; fi++) {
-          for (var y = 0; y < tilesPerSide; y++) {
-            for (var x = 0; x < tilesPerSide; x++) {
-              urls.push('tiles/' + sceneId + '/' + (z + 1) + '/' + faces[fi] + '/' + y + '/' + x + '.jpg');
+      for (var z = 0; z < levels.length; z++) {
+        var lvl = levels[z];
+        var n = Math.ceil(lvl.size / lvl.tileSize);
+        for (var f = 0; f < 6; f++) {
+          for (var row = 0; row < n; row++) {
+            for (var col = 0; col < n; col++) {
+              var url = 'tiles/' + sceneId + '/' + (z + 1) + '/' +
+                        faces[f] + '/' + row + '/' + col + '.jpg';
+              if (!this.seen[url]) {
+                this.seen[url] = true;
+                this.queue.push(url);
+              }
             }
           }
         }
       }
-      return urls;
-    },
-
-    // Добавить URL-ы в очередь с приоритетом (1 = высший)
-    enqueue: function(urls, priority) {
-      for (var i = 0; i < urls.length; i++) {
-        if (!this.loaded[urls[i]]) {
-          this.loaded[urls[i]] = true; // помечаем чтобы не дублировать
-          this.queue.push({ url: urls[i], priority: priority });
-        }
-      }
-      // Сортируем: меньший приоритет = раньше
-      this.queue.sort(function(a, b) { return a.priority - b.priority; });
       this.process();
     },
 
-    // Запустить загрузку из очереди
     process: function() {
-      if (this.paused) return;
-
-      while (this.active < this.maxConcurrent && this.queue.length > 0) {
-        var item = this.queue.shift();
-        this.active++;
-        var self = this;
-        (function(url) {
+      var self = this;
+      while (self.active < self.maxActive && self.queue.length > 0) {
+        self.active++;
+        (function() {
           var img = new Image();
           img.onload = img.onerror = function() {
             self.active--;
             self.process();
           };
-          img.src = url;
-        })(item.url);
+          img.src = self.queue.shift();
+        })();
       }
     },
 
-    // Очистить очередь (не останавливает текущие загрузки)
-    clearQueue: function() {
+    clear: function() {
       this.queue = [];
-    },
-
-    // Сбросить «loaded» маркеры для возможности перезагрузки
-    // (используется при полной переприоритизации)
-    resetLoaded: function() {
-      // Не сбрасываем — уже загруженные файлы в кеше браузера
-    },
-
-    // Предзагрузить сцену
-    preloadScene: function(sceneData, priority, maxLevel) {
-      var urls = this.getTileUrls(sceneData.id, sceneData.levels, maxLevel);
-      this.enqueue(urls, priority);
-    },
-
-    // Полная предзагрузка при переключении сцены
-    onSceneSwitch: function(currentSceneData, allScenesData) {
-      // Останавливаем текущую очередь
-      this.clearQueue();
-
-      // 1. Текущая сцена — все тайлы (приоритет 1)
-      this.preloadScene(currentSceneData, 1);
-
-      // 2. Связанные сцены — все тайлы (приоритет 2)
-      var linkedIds = {};
-      if (currentSceneData.linkHotspots) {
-        for (var i = 0; i < currentSceneData.linkHotspots.length; i++) {
-          var targetId = currentSceneData.linkHotspots[i].target;
-          if (!linkedIds[targetId]) {
-            linkedIds[targetId] = true;
-            var linkedData = findSceneDataByIdGlobal(targetId);
-            if (linkedData) {
-              this.preloadScene(linkedData, 2);
-            }
-          }
-        }
-      }
-
-      // 3. Все остальные сцены — все тайлы (приоритет 3)
-      for (var j = 0; j < allScenesData.length; j++) {
-        var sd = allScenesData[j];
-        if (sd.id !== currentSceneData.id && !linkedIds[sd.id]) {
-          this.preloadScene(sd, 3);
-        }
-      }
     }
   };
 
-  // Вспомогательная функция для предзагрузчика (глобальный поиск по data)
-  function findSceneDataByIdGlobal(id) {
-    for (var i = 0; i < data.scenes.length; i++) {
-      if (data.scenes[i].id === id) {
-        return data.scenes[i];
-      }
-    }
-    return null;
-  }
   // ============================================================
 
   var scenes = data.scenes.map(function(sceneData) {
@@ -372,20 +410,45 @@
   }
 
   function switchScene(scene) {
+    // Инкрементируем ID чтобы отменить предыдущее сканирование
+    forceLoadId++;
     stopAutorotate();
+    bgPreloader.clear();
+
     scene.view.setParameters(scene.data.initialViewParameters);
     scene.scene.switchTo();
 
     requestAnimationFrame(function() {
       scene.view.setParameters(scene.data.initialViewParameters);
-      startAutorotate();
+
+      // Ждём пока начальные видимые тайлы подгрузятся
+      setTimeout(function() {
+
+        // Сканируем все грани — принудительная загрузка в WebGL
+        forceLoadAllTiles(scene, function() {
+          startAutorotate();
+
+          // После сканирования — фоновая предзагрузка связанных сцен
+          var hotspots = scene.data.linkHotspots || [];
+          for (var i = 0; i < hotspots.length; i++) {
+            var sd = findSceneDataById(hotspots[i].target);
+            if (sd) bgPreloader.addScene(sd.id, sd.levels);
+          }
+
+          // И всех остальных сцен тура
+          for (var j = 0; j < data.scenes.length; j++) {
+            var s = data.scenes[j];
+            if (s.id !== scene.data.id) {
+              bgPreloader.addScene(s.id, s.levels);
+            }
+          }
+        });
+
+      }, 500);
     });
 
     updateSceneName(scene);
     updateSceneList(scene);
-
-    // Запускаем предзагрузку: текущая → связанные → все остальные
-    preloader.onSceneSwitch(scene.data, data.scenes);
   }
 
   function updateSceneName(scene) {
