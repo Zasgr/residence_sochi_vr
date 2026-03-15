@@ -9,6 +9,44 @@
   var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+  // ============================================================
+  // SPLASH SCREEN
+  // ============================================================
+  var splashElement = document.querySelector('#splashScreen');
+  var splashFill = document.querySelector('.splash-progress-fill');
+  var splashText = document.querySelector('.splash-progress-text');
+  var splashVisible = true;
+
+  function splashSetProgress(percent, text) {
+    if (!splashVisible) return;
+    if (splashFill) {
+      splashFill.style.width = Math.min(100, Math.round(percent)) + '%';
+    }
+    if (splashText && text) {
+      splashText.textContent = text;
+    }
+  }
+
+  function splashHide() {
+    if (!splashVisible) return;
+    splashVisible = false;
+    splashSetProgress(100, 'Готово');
+    setTimeout(function() {
+      if (splashElement) {
+        splashElement.classList.add('hidden');
+      }
+      // Удаляем из DOM после анимации
+      setTimeout(function() {
+        if (splashElement && splashElement.parentNode) {
+          splashElement.parentNode.removeChild(splashElement);
+        }
+      }, 900);
+    }, 300);
+  }
+  // ============================================================
+
+  splashSetProgress(5, 'Инициализация...');
+
   var panoElement = document.querySelector('#pano');
   var sceneNameElement = document.querySelector('#titleBar .sceneName');
   var sceneListElement = document.querySelector('#sceneList');
@@ -44,7 +82,6 @@
     document.body.classList.add('tooltip-fallback');
   }
 
-  // preserveDrawingBuffer нужен для захвата скриншота canvas
   var viewerOpts = {
     controls: {
       mouseViewMode: data.settings.mouseViewMode
@@ -53,6 +90,8 @@
       preserveDrawingBuffer: true
     }
   };
+
+  splashSetProgress(10, 'Создание вьювера...');
 
   var viewer = new Marzipano.Viewer(panoElement, viewerOpts);
 
@@ -94,9 +133,9 @@
   // ОВЕРЛЕЙ С БЛЮРОМ
   // ============================================================
   var forceLoadId = 0;
-  var FADE_OUT_MS = 500;
-  var BLUR_AMOUNT = 20;       // пиксели блюра
-  var BLUR_SCALE = 1.15;      // масштаб чтобы скрыть прозрачные края
+  var FADE_OUT_MS = 700;
+  var BLUR_AMOUNT = 20;
+  var BLUR_SCALE = 1.15;
   var currentOverlay = null;
 
   function captureScreenshot() {
@@ -110,7 +149,6 @@
   }
 
   function createBlurOverlay(screenshotDataUrl) {
-    // Удаляем предыдущий
     if (currentOverlay && currentOverlay.parentNode) {
       currentOverlay.parentNode.removeChild(currentOverlay);
     }
@@ -129,7 +167,6 @@
         'transform:scale(' + BLUR_SCALE + ');' +
         'opacity:1;';
     } else {
-      // Фоллбэк — чёрный экран если скриншот не удался
       overlay.style.cssText =
         'position:absolute;top:0;left:0;width:100%;height:100%;' +
         'z-index:999;pointer-events:none;background-color:#000;opacity:1;';
@@ -153,7 +190,6 @@
 
     requestAnimationFrame(function() {
       overlay.style.opacity = '0';
-      // Одновременно убираем блюр для эффекта «фокусировки»
       overlay.style.webkitFilter = 'blur(0px)';
       overlay.style.filter = 'blur(0px)';
     });
@@ -180,8 +216,9 @@
 
   // ============================================================
   // ПРИНУДИТЕЛЬНАЯ ЗАГРУЗКА ВСЕХ ТАЙЛОВ
+  // С прогрессом для splash screen
   // ============================================================
-  function forceLoadAllTiles(sceneObj, overlay, onComplete) {
+  function forceLoadAllTiles(sceneObj, overlay, onComplete, onProgress) {
     var myId = ++forceLoadId;
 
     var view = sceneObj.view;
@@ -204,6 +241,7 @@
     positions.push({ yaw: Math.PI / 4, pitch: -1.3, fov: fov });
     positions.push({ yaw: -Math.PI / 4, pitch: 1.3, fov: fov });
 
+    var totalPositions = positions.length;
     var idx = 0;
     var framesPerPosition = 2;
     var frameCount = 0;
@@ -214,6 +252,10 @@
       if (idx < positions.length) {
         if (frameCount === 0) {
           view.setParameters(positions[idx]);
+          // Репортим прогресс
+          if (onProgress) {
+            onProgress(idx, totalPositions);
+          }
         }
         frameCount++;
         if (frameCount >= framesPerPosition) {
@@ -223,6 +265,10 @@
         requestAnimationFrame(tick);
       } else {
         view.setParameters(initParams);
+
+        if (onProgress) {
+          onProgress(totalPositions, totalPositions);
+        }
 
         requestAnimationFrame(function() {
           requestAnimationFrame(function() {
@@ -292,8 +338,11 @@
   };
 
   // ============================================================
+  // СОЗДАНИЕ СЦЕН
+  // ============================================================
+  splashSetProgress(15, 'Подготовка сцен...');
 
-  var scenes = data.scenes.map(function(sceneData) {
+  var scenes = data.scenes.map(function(sceneData, index) {
     var urlPrefix = "tiles";
 
     var sourceOptions = isIOS
@@ -335,12 +384,18 @@
       });
     });
 
+    // Прогресс создания сцен: 15% → 25%
+    var sceneProgress = 15 + ((index + 1) / data.scenes.length) * 10;
+    splashSetProgress(sceneProgress, 'Подготовка сцен (' + (index + 1) + '/' + data.scenes.length + ')...');
+
     return {
       data: sceneData,
       scene: scene,
       view: view
     };
   });
+
+  splashSetProgress(25, 'Настройка управления...');
 
   var autorotate = Marzipano.autorotate({
     yawSpeed: 0.03,
@@ -455,10 +510,6 @@
 
   // ============================================================
   // ПЕРЕКЛЮЧЕНИЕ СЦЕНЫ
-  // 1. Скриншот текущего кадра → блюр-оверлей
-  // 2. Переключение сцены за оверлеем
-  // 3. Сканирование всех граней
-  // 4. Плавное проявление с эффектом фокусировки
   // ============================================================
   var isFirstScene = true;
 
@@ -467,27 +518,41 @@
     stopAutorotate();
     bgPreloader.clear();
 
-    // 1. Захватываем скриншот ДО переключения (кроме первого запуска)
     var screenshot = null;
     if (!isFirstScene) {
       screenshot = captureScreenshot();
     }
+    var wasFirst = isFirstScene;
     isFirstScene = false;
 
-    // 2. Мгновенно показываем блюр предыдущего кадра
-    var overlay = createBlurOverlay(screenshot);
+    // При первом запуске не создаём блюр — виден splash screen
+    var overlay = null;
+    if (!wasFirst) {
+      overlay = createBlurOverlay(screenshot);
+    }
 
-    // 3. Переключаем сцену за оверлеем
+    if (wasFirst) {
+      splashSetProgress(30, 'Загрузка панорамы...');
+    }
+
     scene.view.setParameters(scene.data.initialViewParameters);
     scene.scene.switchTo();
 
     requestAnimationFrame(function() {
       scene.view.setParameters(scene.data.initialViewParameters);
 
-      // 4. Ждём начальные тайлы, затем сканируем
+      if (wasFirst) {
+        splashSetProgress(35, 'Загрузка тайлов...');
+      }
+
       setTimeout(function() {
 
         forceLoadAllTiles(scene, overlay, function() {
+          // Загрузка завершена
+          if (wasFirst) {
+            splashHide();
+          }
+
           startAutorotate();
 
           var hotspots = scene.data.linkHotspots || [];
@@ -502,7 +567,13 @@
               bgPreloader.addScene(s.id, s.levels);
             }
           }
-        });
+
+        }, wasFirst ? function(current, total) {
+          // Callback прогресса только для первой сцены
+          // 35% → 95% за время сканирования
+          var scanProgress = 35 + (current / total) * 60;
+          splashSetProgress(scanProgress, 'Загрузка панорамы... ' + Math.round(scanProgress) + '%');
+        } : null);
 
       }, 500);
     });

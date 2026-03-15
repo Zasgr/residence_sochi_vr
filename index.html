@@ -18,6 +18,20 @@
 
 <body class="multiple-scenes ">
 
+  <!-- Splash Screen -->
+  <div id="splashScreen">
+    <div class="splash-content">
+      <div class="splash-icon">🏠</div>
+      <h1 class="splash-title"></h1>
+      <div class="splash-progress-wrapper">
+        <div class="splash-progress-bar">
+          <div class="splash-progress-fill"></div>
+        </div>
+        <div class="splash-progress-text">Загрузка панорамы...</div>
+      </div>
+    </div>
+  </div>
+
   <div id="pano"></div>
 
   <div id="sceneList">
@@ -71,6 +85,10 @@
 
   <script>
     document.title = APP_DATA.name;
+
+    // Заголовок в splash screen
+    var splashTitle = document.querySelector('.splash-title');
+    if (splashTitle) splashTitle.textContent = APP_DATA.name;
 
     var el = document.querySelector('#sceneList ul');
 
